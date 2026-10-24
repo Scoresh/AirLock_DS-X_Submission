@@ -7,11 +7,11 @@
     },
     {
       "page": 2,
-      "text": "Chapter 2. Methods\n\nWe interviewed four undergraduates about where they study at night. [PARTICIPANT_03], a 19-year-old sophomore majoring in ethnic studies from Iceland, lives in campus housing. [PARTICIPANT_05] is a senior majoring in economics who lives off campus. [PARTICIPANT_07], a 20-year-old sophomore majoring in biomedical engineering from Sweden, lives in campus housing. [PARTICIPANT_09], a 19-year-old first-year majoring in physics, lives in campus housing and is a varsity athlete."
+      "text": "Chapter 2. Methods\n\nWe interviewed four undergraduates about where they study at night. [PARTICIPANT_03], a senior who identifies as Gray mouse lemur, is majoring in Clockmaking: Technology with a second major in Orchard Management: Technology and transferred from another college. [PARTICIPANT_05] is a first-year majoring in Tea Sciences: Policy who identifies as Ring-tailed lemur. [PARTICIPANT_07] is a first-year majoring in Lighthouse Engineering: Methods who identifies as Diademed sifaka. [PARTICIPANT_09], a senior majoring in Wayfinding: Studio, identifies as Aye-aye and transferred from another college."
     },
     {
       "page": 3,
-      "text": "Chapter 3. Findings\n\nMost participants preferred quiet spaces after 10 PM. [PARTICIPANT_03] described the library basement as the only place that felt calm during exam weeks, while [PARTICIPANT_09] studied in team facilities between practices."
+      "text": "Chapter 3. Findings\n\nMost participants preferred quiet spaces after 10 PM. [PARTICIPANT_03] described the library basement as the only place that felt calm during exam weeks, while [PARTICIPANT_09] studied in the transfer-student lounge between classes."
     },
     {
       "page": 4,
@@ -47,22 +47,23 @@
         2
       ],
       "attributes": {
-        "IRage": 19,
-        "class": "Sophomore",
-        "country22": "Iceland",
-        "MAJfirstcode": "Ethnic studies",
-        "living18": "Campus housing"
+        "Class": "Senior",
+        "MAJfirst": "Clockmaking: Technology",
+        "MAJsecond": "Orchard Management: Technology",
+        "affiliation": "Gray mouse lemur",
+        "begincol": "Started at another college"
       },
       "evidence": [
         {
           "page": 2,
-          "quote": "[PARTICIPANT_03], a 19-year-old sophomore majoring in ethnic studies from Iceland, lives in campus housing."
+          "quote": "[PARTICIPANT_03], a senior who identifies as Gray mouse lemur, is majoring in Clockmaking: Technology with a second major in Orchard Management: Technology and transferred from another college."
         }
       ],
       "mentions": {
-        "IRage": "19-year-old",
-        "country22": "Iceland",
-        "MAJfirstcode": "ethnic studies"
+        "MAJfirst": "Clockmaking: Technology",
+        "MAJsecond": "Orchard Management: Technology",
+        "affiliation": "Gray mouse lemur",
+        "begincol": "transferred from another college"
       }
     },
     {
@@ -71,18 +72,19 @@
         2
       ],
       "attributes": {
-        "class": "Senior",
-        "MAJfirstcode": "Economics",
-        "living18": "Within walking distance"
+        "Class": "First-year",
+        "MAJfirst": "Tea Sciences: Policy",
+        "affiliation": "Ring-tailed lemur"
       },
       "evidence": [
         {
           "page": 2,
-          "quote": "[PARTICIPANT_05] is a senior majoring in economics who lives off campus."
+          "quote": "[PARTICIPANT_05] is a first-year majoring in Tea Sciences: Policy who identifies as Ring-tailed lemur."
         }
       ],
       "mentions": {
-        "MAJfirstcode": "economics"
+        "MAJfirst": "Tea Sciences: Policy",
+        "affiliation": "Ring-tailed lemur"
       }
     },
     {
@@ -91,22 +93,19 @@
         2
       ],
       "attributes": {
-        "IRage": 20,
-        "class": "Sophomore",
-        "country22": "Sweden",
-        "MAJfirstcode": "Biomedical engineering",
-        "living18": "Campus housing"
+        "Class": "First-year",
+        "MAJfirst": "Lighthouse Engineering: Methods",
+        "affiliation": "Diademed sifaka"
       },
       "evidence": [
         {
           "page": 2,
-          "quote": "[PARTICIPANT_07], a 20-year-old sophomore majoring in biomedical engineering from Sweden, lives in campus housing."
+          "quote": "[PARTICIPANT_07] is a first-year majoring in Lighthouse Engineering: Methods who identifies as Diademed sifaka."
         }
       ],
       "mentions": {
-        "IRage": "20-year-old",
-        "country22": "Sweden",
-        "MAJfirstcode": "biomedical engineering"
+        "MAJfirst": "Lighthouse Engineering: Methods",
+        "affiliation": "Diademed sifaka"
       }
     },
     {
@@ -115,21 +114,21 @@
         2
       ],
       "attributes": {
-        "IRage": 19,
-        "class": "First-year",
-        "MAJfirstcode": "Physics",
-        "living18": "Campus housing",
-        "athlete": 1
+        "Class": "Senior",
+        "MAJfirst": "Wayfinding: Studio",
+        "affiliation": "Aye-aye",
+        "begincol": "Started at another college"
       },
       "evidence": [
         {
           "page": 2,
-          "quote": "[PARTICIPANT_09], a 19-year-old first-year majoring in physics, lives in campus housing and is a varsity athlete."
+          "quote": "[PARTICIPANT_09], a senior majoring in Wayfinding: Studio, identifies as Aye-aye and transferred from another college."
         }
       ],
       "mentions": {
-        "IRage": "19-year-old",
-        "MAJfirstcode": "physics"
+        "MAJfirst": "Wayfinding: Studio",
+        "affiliation": "Aye-aye",
+        "begincol": "transferred from another college"
       }
     }
   ]

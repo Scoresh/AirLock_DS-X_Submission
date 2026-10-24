@@ -1,4 +1,4 @@
-"""Stranger Mode local API.  Owner: Dan.
+"""StrangerThesis local API.  Owner: Dan.
 
 Run from /backend:  uvicorn app.main:app --reload
 Docs:               http://127.0.0.1:8000/docs
@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -14,7 +15,7 @@ from . import format_rules, review, risk, scrub, store
 from .parse import ParseError, parse_pdf
 from .schemas import ParseResult, ReviewRequest, ReviewResult, ScoreRequest, ScoreResult, ScrubResult
 
-app = FastAPI(title="Stranger Mode")
+app = FastAPI(title="StrangerThesis")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -59,8 +60,25 @@ def run_review(req: ReviewRequest):
         raise HTTPException(403, "privacy gate is closed: accept fixes for high-risk participants first")
     findings = format_rules.run_all(state.parsed)
     sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
-    findings += review.restore(review.llm_review(sent, req.rubric_text), req.doc_id)
-    return ReviewResult(doc_id=req.doc_id, findings=findings)
+    model_findings, status = review.llm_review(sent, req.rubric_text)
+    findings += review.restore(model_findings, req.doc_id)
+    return ReviewResult(doc_id=req.doc_id, findings=findings, model_review=status,
+                        model=review.model_config()["model"])
+
+
+@app.get("/status")
+def status():
+    """Which review model is configured, so the UI can say where text would go."""
+    return {"model": review.model_config()}
+
+
+SAMPLE_PDF = Path(__file__).resolve().parents[2] / "samples" / "test-thesis.pdf"
+
+
+@app.get("/sample", response_class=FileResponse)
+def sample():
+    """The test thesis, so the UI can offer an explicit "Open sample document" action."""
+    return FileResponse(SAMPLE_PDF, media_type="application/pdf", filename="test-thesis.pdf")
 
 
 @app.get("/llm-view/{doc_id}")

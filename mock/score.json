@@ -6,44 +6,51 @@
       "k": 1,
       "risk": "high",
       "attributes": {
-        "IRage": 19,
-        "class": "Sophomore",
-        "country22": "Iceland",
-        "MAJfirstcode": "Ethnic studies",
-        "living18": "Campus housing"
+        "Class": "Senior",
+        "MAJfirst": "Clockmaking: Technology",
+        "MAJsecond": "Orchard Management: Technology",
+        "affiliation": "Gray mouse lemur",
+        "begincol": "Started at another college"
       },
       "suggestions": [
         {
-          "field": "IRage",
-          "from": "19",
-          "to": "19 or younger",
-          "new_field": "IRagecol",
+          "field": "MAJfirst",
+          "from": "Clockmaking: Technology",
+          "to": "Clockmaking",
+          "new_field": "MAJfirstfield",
           "new_k": 1
         },
         {
-          "field": "country22",
-          "from": "Iceland",
-          "to": "Europe",
-          "new_field": "countrycol22",
+          "field": "MAJsecond",
+          "from": "Orchard Management: Technology",
+          "to": "Orchard Management",
+          "new_field": "MAJsecondfield",
           "new_k": 1
         },
         {
-          "field": "MAJfirstcode",
-          "from": "Ethnic studies",
-          "to": "Social Sciences",
-          "new_field": "MAJfirstcol",
+          "field": "affiliation",
+          "from": "Gray mouse lemur",
+          "to": "omitted",
+          "new_field": "",
+          "new_k": 1
+        },
+        {
+          "field": "begincol",
+          "from": "Started at another college",
+          "to": "omitted",
+          "new_field": "",
           "new_k": 1
         }
       ]
     },
     {
       "id": "PARTICIPANT_05",
-      "k": 69,
+      "k": 331,
       "risk": "low",
       "attributes": {
-        "class": "Senior",
-        "MAJfirstcode": "Economics",
-        "living18": "Within walking distance"
+        "Class": "First-year",
+        "MAJfirst": "Tea Sciences: Policy",
+        "affiliation": "Ring-tailed lemur"
       },
       "suggestions": []
     },
@@ -52,33 +59,24 @@
       "k": 1,
       "risk": "high",
       "attributes": {
-        "IRage": 20,
-        "class": "Sophomore",
-        "country22": "Sweden",
-        "MAJfirstcode": "Biomedical engineering",
-        "living18": "Campus housing"
+        "Class": "First-year",
+        "MAJfirst": "Lighthouse Engineering: Methods",
+        "affiliation": "Diademed sifaka"
       },
       "suggestions": [
         {
-          "field": "country22",
-          "from": "Sweden",
-          "to": "Europe",
-          "new_field": "countrycol22",
-          "new_k": 2
+          "field": "affiliation",
+          "from": "Diademed sifaka",
+          "to": "omitted",
+          "new_field": "",
+          "new_k": 14
         },
         {
-          "field": "IRage",
-          "from": "20",
-          "to": "20-23",
-          "new_field": "IRagecol",
-          "new_k": 1
-        },
-        {
-          "field": "MAJfirstcode",
-          "from": "Biomedical engineering",
-          "to": "Engineering",
-          "new_field": "MAJfirstcol",
-          "new_k": 1
+          "field": "MAJfirst",
+          "from": "Lighthouse Engineering: Methods",
+          "to": "Lighthouse Engineering",
+          "new_field": "MAJfirstfield",
+          "new_k": 12
         }
       ]
     },
@@ -87,26 +85,32 @@
       "k": 1,
       "risk": "high",
       "attributes": {
-        "IRage": 19,
-        "class": "First-year",
-        "MAJfirstcode": "Physics",
-        "living18": "Campus housing",
-        "athlete": 1
+        "Class": "Senior",
+        "MAJfirst": "Wayfinding: Studio",
+        "affiliation": "Aye-aye",
+        "begincol": "Started at another college"
       },
       "suggestions": [
         {
-          "field": "MAJfirstcode",
-          "from": "Physics",
-          "to": "Physical Sciences, Mathematics, and Computer Science",
-          "new_field": "MAJfirstcol",
-          "new_k": 4
+          "field": "affiliation",
+          "from": "Aye-aye",
+          "to": "omitted",
+          "new_field": "",
+          "new_k": 9
         },
         {
-          "field": "IRage",
-          "from": "19",
-          "to": "19 or younger",
-          "new_field": "IRagecol",
-          "new_k": 2
+          "field": "begincol",
+          "from": "Started at another college",
+          "to": "omitted",
+          "new_field": "",
+          "new_k": 8
+        },
+        {
+          "field": "MAJfirst",
+          "from": "Wayfinding: Studio",
+          "to": "Wayfinding",
+          "new_field": "MAJfirstfield",
+          "new_k": 1
         }
       ]
     }
