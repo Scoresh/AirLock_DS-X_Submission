@@ -1,0 +1,35 @@
+{
+  "doc_id": "demo",
+  "pages": [
+    {
+      "page": 1,
+      "text": "THE NIGHT SKY AS A LEARNING SPACE\nA thesis submitted ...",
+      "layout": {
+        "width_in": 8.5, "height_in": 11,
+        "margins_in": {"top": 1.0, "bottom": 1.0, "left": 1.5, "right": 1.0},
+        "fonts": [{"name": "TimesNewRoman", "size": 12, "chars": 1840}],
+        "page_label": null, "page_label_position": null
+      }
+    },
+    {
+      "page": 4,
+      "text": "Participant 3, a 22-year-old astronomy major from Iceland, lives in campus housing and plays on the varsity soccer team.",
+      "layout": {
+        "width_in": 8.5, "height_in": 11,
+        "margins_in": {"top": 1.0, "bottom": 1.0, "left": 0.75, "right": 1.0},
+        "fonts": [{"name": "TimesNewRoman", "size": 12, "chars": 2310}],
+        "page_label": "4", "page_label_position": "bottom-center"
+      }
+    },
+    {
+      "page": 12,
+      "text": "Appendix B. Interview scheduling was handled by Maya Lindqvist (mlindq@bu.edu).",
+      "layout": {
+        "width_in": 8.5, "height_in": 11,
+        "margins_in": {"top": 1.0, "bottom": 1.0, "left": 1.5, "right": 1.0},
+        "fonts": [{"name": "Arial", "size": 11, "chars": 950}],
+        "page_label": "11", "page_label_position": "top-right"
+      }
+    }
+  ]
+}
