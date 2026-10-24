@@ -86,6 +86,18 @@ function concernsOnPage(n) {
     .filter((p) => p.pages.includes(n) && scored[p.id] && scored[p.id].risk !== "low");
 }
 
+function idsOnPage(n) {
+  return new Set((state.scrubbed?.direct_identifiers || []).filter((d) => d.page === n).map((d) => d.token)).size;
+}
+
+// What the page index and the page edge show, most urgent first.
+function pageStatus(n) {
+  if (concernsOnPage(n).length) return "risk";
+  if (idsOnPage(n)) return "replaced";
+  if (findingsOnPage(n).length) return "format";
+  return "";
+}
+
 function findingsOnPage(n, source) {
   return (state.review?.findings || []).filter((f) => f.page === n && (!source || f.source === source));
 }
@@ -344,16 +356,21 @@ function renderSidebar() {
   const pages = state.parsed.pages;
   $("page-list").innerHTML = pages.map(({ page: n }) => {
     const p = concernsOnPage(n).length;
+    const i = idsOnPage(n);
     const f = findingsOnPage(n, "rule").length;
     const m = findingsOnPage(n, "llm").length;
     const parts = [
-      p && `${plural(p, "privacy concern")}`, f && `${plural(f, "format finding")}`, m && `${plural(m, "model finding")}`,
+      p && `${plural(p, "privacy risk")}`, i && `${plural(i, "identifier")} replaced`,
+      f && `${plural(f, "format finding")}`, m && `${plural(m, "model finding")}`,
     ].filter(Boolean);
+    const status = pageStatus(n);
     return `<li><button type="button" data-page="${n}" aria-current="${n === state.page}"
         aria-label="Page ${n}${parts.length ? `: ${parts.join(", ")}` : ": no findings"}">
+      ${status ? `<span class="pagelist__bar pagelist__bar--${status}" aria-hidden="true"></span>` : ""}
       <span class="pagelist__num">p. ${n}</span>
       <span class="pagelist__marks" aria-hidden="true">
         ${p ? `<b class="mk mk--privacy">P${p > 1 ? p : ""}</b>` : ""}
+        ${i ? `<b class="mk mk--replaced">I${i > 1 ? i : ""}</b>` : ""}
         ${f ? `<b class="mk mk--format">F${f > 1 ? f : ""}</b>` : ""}
         ${m ? `<b class="mk mk--model">M${m > 1 ? m : ""}</b>` : ""}
       </span></button></li>`;
@@ -372,8 +389,15 @@ function renderSidebar() {
 $("page-list").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-page]");
   if (!b) return;
-  selectPage(Number(b.dataset.page), { scroll: true });
-  if (state.tab !== "document") selectTab("document");
+  const n = Number(b.dataset.page);
+  selectPage(n, { scroll: true });
+  // Stay in the current check and bring that page's items into view.
+  if (state.tab === "privacy") {
+    const p = state.scrubbed.participants.find((x) => x.pages.includes(n));
+    if (p) $(`concern-${p.id}`)?.scrollIntoView({ block: "start" });
+  } else if (state.tab === "review") {
+    document.querySelector(`#panel-review .annot[data-page="${n}"]`)?.scrollIntoView({ block: "nearest" });
+  }
   showPane("reader");
 });
 
@@ -500,10 +524,9 @@ function renderOverlays() {
     });
 
     const edge = pageEl.querySelector(".sheet__edge");
-    const privacy = concernsOnPage(n).length > 0;
-    const format = findingsOnPage(n).length > 0;
-    edge.hidden = !(privacy || format);
-    edge.className = `sheet__edge ${privacy ? "sheet__edge--privacy" : "sheet__edge--format"}`;
+    const status = pageStatus(n);
+    edge.hidden = !status;
+    edge.className = `sheet__edge sheet__edge--${status}`;
   });
 }
 
@@ -828,7 +851,7 @@ $("inspector").addEventListener("click", (e) => {
 /* ---------- inspector: review ---------- */
 function annotationHtml(f, i) {
   const kind = f.source === "llm" ? "model" : "format";
-  return `<button type="button" class="annot annot--${kind}" data-key="f-${i}">
+  return `<button type="button" class="annot annot--${kind}" data-key="f-${i}" data-page="${f.page}">
     <span class="annot__meta"><span class="num">p. ${f.page}</span>
       <span class="annot__src">${kind === "model" ? "Model review" : "Local rule"}</span>
       <span>${f.severity === "error" ? "Error" : "Warning"}</span></span>
