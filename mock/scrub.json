@@ -3,52 +3,133 @@
   "scrubbed_pages": [
     {
       "page": 1,
-      "text": "THE NIGHT SKY AS A LEARNING SPACE\nA thesis submitted ..."
+      "text": "LEARNING UNDER THE NIGHT SKY: STUDENT EXPERIENCES OF CAMPUS STUDY SPACES\n\nA thesis submitted in partial fulfillment of the requirements for the degree of Bachelor of Arts\n\nBoston University 2026"
+    },
+    {
+      "page": 2,
+      "text": "Chapter 2. Methods\n\nWe interviewed four undergraduates about where they study at night. [PARTICIPANT_03], a 19-year-old sophomore majoring in ethnic studies from Iceland, lives in campus housing. [PARTICIPANT_05] is a senior majoring in economics who lives off campus. [PARTICIPANT_07], a 20-year-old sophomore majoring in biomedical engineering from Sweden, lives in campus housing. [PARTICIPANT_09], a 19-year-old first-year majoring in physics, lives in campus housing and is a varsity athlete."
+    },
+    {
+      "page": 3,
+      "text": "Chapter 3. Findings\n\nMost participants preferred quiet spaces after 10 PM. [PARTICIPANT_03] described the library basement as the only place that felt calm during exam weeks, while [PARTICIPANT_09] studied in team facilities between practices."
     },
     {
       "page": 4,
-      "text": "[PARTICIPANT_03], a 22-year-old astronomy major from Iceland, lives in campus housing and plays on the varsity soccer team."
-    },
-    {
-      "page": 12,
-      "text": "Appendix B. Interview scheduling was handled by [PERSON_01] ([EMAIL_01])."
+      "text": "Appendix B. Interview Logistics\n\nInterview scheduling was handled by [PERSON_01] ([EMAIL_01], [PHONE_01]). [PERSON_01] also transcribed the recordings."
     }
   ],
   "direct_identifiers": [
     {
       "token": "[PERSON_01]",
       "type": "PERSON",
-      "page": 12
+      "page": 4
     },
     {
       "token": "[EMAIL_01]",
       "type": "EMAIL",
-      "page": 12
+      "page": 4
+    },
+    {
+      "token": "[PHONE_01]",
+      "type": "PHONE",
+      "page": 4
+    },
+    {
+      "token": "[PERSON_01]",
+      "type": "PERSON",
+      "page": 4
     }
   ],
   "participants": [
     {
       "id": "PARTICIPANT_03",
       "pages": [
-        4
+        2
       ],
       "attributes": {
-        "IRage": 22,
+        "IRage": 19,
+        "class": "Sophomore",
         "country22": "Iceland",
-        "MAJfirstcode": "Astronomy",
+        "MAJfirstcode": "Ethnic studies",
+        "living18": "Campus housing"
+      },
+      "evidence": [
+        {
+          "page": 2,
+          "quote": "[PARTICIPANT_03], a 19-year-old sophomore majoring in ethnic studies from Iceland, lives in campus housing."
+        }
+      ],
+      "mentions": {
+        "IRage": "19-year-old",
+        "country22": "Iceland",
+        "MAJfirstcode": "ethnic studies"
+      }
+    },
+    {
+      "id": "PARTICIPANT_05",
+      "pages": [
+        2
+      ],
+      "attributes": {
+        "class": "Senior",
+        "MAJfirstcode": "Economics",
+        "living18": "Within walking distance"
+      },
+      "evidence": [
+        {
+          "page": 2,
+          "quote": "[PARTICIPANT_05] is a senior majoring in economics who lives off campus."
+        }
+      ],
+      "mentions": {
+        "MAJfirstcode": "economics"
+      }
+    },
+    {
+      "id": "PARTICIPANT_07",
+      "pages": [
+        2
+      ],
+      "attributes": {
+        "IRage": 20,
+        "class": "Sophomore",
+        "country22": "Sweden",
+        "MAJfirstcode": "Biomedical engineering",
+        "living18": "Campus housing"
+      },
+      "evidence": [
+        {
+          "page": 2,
+          "quote": "[PARTICIPANT_07], a 20-year-old sophomore majoring in biomedical engineering from Sweden, lives in campus housing."
+        }
+      ],
+      "mentions": {
+        "IRage": "20-year-old",
+        "country22": "Sweden",
+        "MAJfirstcode": "biomedical engineering"
+      }
+    },
+    {
+      "id": "PARTICIPANT_09",
+      "pages": [
+        2
+      ],
+      "attributes": {
+        "IRage": 19,
+        "class": "First-year",
+        "MAJfirstcode": "Physics",
         "living18": "Campus housing",
         "athlete": 1
       },
       "evidence": [
         {
-          "page": 4,
-          "quote": "a 22-year-old astronomy major from Iceland, lives in campus housing and plays on the varsity soccer team"
+          "page": 2,
+          "quote": "[PARTICIPANT_09], a 19-year-old first-year majoring in physics, lives in campus housing and is a varsity athlete."
         }
       ],
       "mentions": {
-        "IRage": "22-year-old",
-        "country22": "Iceland",
-        "MAJfirstcode": "astronomy"
+        "IRage": "19-year-old",
+        "MAJfirstcode": "physics"
       }
     }
   ]
