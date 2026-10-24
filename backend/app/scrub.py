@@ -33,9 +33,18 @@ NAME_SHAPE = re.compile(rf"{_WORD}(?: (?:{_WORD}|[A-Z]\.|{_PARTICLE}))*")
 NAME_BEFORE = re.compile(rf"({_WORD}) $")  # a capitalized word directly before a detected name
 TITLES = {"professor", "prof", "dr", "mr", "mrs", "ms", "mx", "instructor", "student", "advisor",
           "supervisor", "author", "authors", "dean", "chair", "lab", "ta", "by", "for", "dear"}
-STRUCTURE_WORDS = {"appendix", "figure", "fig", "table", "chapter", "section", "part", "step", "equation", "eq"}
+# Words that make a capitalized phrase a heading or document part, never a person.
+STRUCTURE_WORDS = {
+    "appendix", "figure", "fig", "table", "chapter", "section", "part", "step", "equation", "eq",
+    "cover", "page", "title", "abstract", "introduction", "conclusion", "conclusions", "summary",
+    "references", "bibliography", "contents", "acknowledgments", "acknowledgements", "methods",
+    "results", "discussion", "procedure", "objective", "objectives", "rubric", "criteria", "points",
+    "lab", "prelab", "report", "assignment", "question", "problem", "exercise",
+}
 LOWERCASE_WORD = re.compile(r"\b[a-zß-öø-ÿ][a-zß-öø-ÿ'’-]{2,}\b")
-SECTION = re.compile(r"\b(?:lab |lecture |discussion |recitation )?section\s*[:#]?\s*([A-Z]?\d{1,3}[A-Z]?)\b", re.I)
+# "Lab Section 4A" or "Section: 04" on one line; not "see section 2" or a heading followed by "0.2".
+SECTION = re.compile(r"\b(?:(?:lab|lecture|discussion|recitation) section[ \t]*[:#]?|section[ \t]*[:#])[ \t]*"
+                     r"([A-Z]?\d{1,3}[A-Z]?)\b(?![.,]\d)", re.I)
 
 CLASS_RE = re.compile(r"\b(first-year|freshman|senior)\b", re.I)
 CLASS_LABEL = {"first-year": "First-year", "freshman": "First-year", "senior": "Senior"}
