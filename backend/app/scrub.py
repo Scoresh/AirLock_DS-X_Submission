@@ -33,9 +33,18 @@ NAME_SHAPE = re.compile(rf"{_WORD}(?: (?:{_WORD}|[A-Z]\.|{_PARTICLE}))*")
 NAME_BEFORE = re.compile(rf"({_WORD}) $")  # a capitalized word directly before a detected name
 TITLES = {"professor", "prof", "dr", "mr", "mrs", "ms", "mx", "instructor", "student", "advisor",
           "supervisor", "author", "authors", "dean", "chair", "lab", "ta", "by", "for", "dear"}
-STRUCTURE_WORDS = {"appendix", "figure", "fig", "table", "chapter", "section", "part", "step", "equation", "eq"}
+# Words that make a capitalized phrase a heading or document part, never a person.
+STRUCTURE_WORDS = {
+    "appendix", "figure", "fig", "table", "chapter", "section", "part", "step", "equation", "eq",
+    "cover", "page", "title", "abstract", "introduction", "conclusion", "conclusions", "summary",
+    "references", "bibliography", "contents", "acknowledgments", "acknowledgements", "methods",
+    "results", "discussion", "procedure", "objective", "objectives", "rubric", "criteria", "points",
+    "lab", "prelab", "report", "assignment", "question", "problem", "exercise",
+}
 LOWERCASE_WORD = re.compile(r"\b[a-zß-öø-ÿ][a-zß-öø-ÿ'’-]{2,}\b")
-SECTION = re.compile(r"\b(?:lab |lecture |discussion |recitation )?section\s*[:#]?\s*([A-Z]?\d{1,3}[A-Z]?)\b", re.I)
+# "Lab Section 4A" or "Section: 04" on one line; not "see section 2" or a heading followed by "0.2".
+SECTION = re.compile(r"\b(?:(?:lab|lecture|discussion|recitation) section[ \t]*[:#]?|section[ \t]*[:#])[ \t]*"
+                     r"([A-Z]?\d{1,3}[A-Z]?)\b(?![.,]\d)", re.I)
 
 CLASS_RE = re.compile(r"\b(first-year|freshman|senior)\b", re.I)
 CLASS_LABEL = {"first-year": "First-year", "freshman": "First-year", "senior": "Senior"}
@@ -65,19 +74,41 @@ def _not_names() -> set[str]:
     return {v.lower() for v in vocab["affiliations"]} | {v.split(":")[0].strip().lower() for v in vocab["majors"]}
 
 
+class SetupError(RuntimeError):
+    """A local dependency is missing; scrubbing must stop rather than silently miss names."""
+
+
+SETUP_HINT = "In backend/: pip install -r requirements.txt, then python -m spacy download en_core_web_sm"
+
+
 @lru_cache(maxsize=1)
 def _analyzer():
-    """Presidio with the small spaCy model; None if it is not installed."""
+    """Presidio with the small spaCy model. Raises SetupError if either is missing."""
     try:
         from presidio_analyzer import AnalyzerEngine
         from presidio_analyzer.nlp_engine import NlpEngineProvider
-    except ImportError:
-        return None
-    provider = NlpEngineProvider(nlp_configuration={
-        "nlp_engine_name": "spacy",
-        "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
-    })
-    return AnalyzerEngine(nlp_engine=provider.create_engine(), supported_languages=["en"])
+    except ImportError as err:
+        raise SetupError(f"Name detection (Presidio) is not installed. {SETUP_HINT}") from err
+    try:
+        provider = NlpEngineProvider(nlp_configuration={
+            "nlp_engine_name": "spacy",
+            "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
+        })
+        return AnalyzerEngine(nlp_engine=provider.create_engine(), supported_languages=["en"])
+    except Exception as err:  # spaCy raises OSError for a missing model; Presidio may wrap it
+        raise SetupError(f"The spaCy model en_core_web_sm is missing. {SETUP_HINT}") from err
+
+
+def setup_status() -> dict:
+    """What the UI shows before upload, so a broken install is visible instead of silent."""
+    issues = []
+    try:
+        _analyzer()
+    except SetupError as err:
+        issues.append(str(err))
+    if not risk.DATA_FILE.exists():
+        issues.append("The reference data is missing: put the organizers' NSSE-synthetic.csv in data/ (ask Selina).")
+    return {"ready": not issues, "issues": issues}
 
 
 def _looks_like_name(name: str, lowercase_words: set[str]) -> bool:
@@ -90,8 +121,6 @@ def _looks_like_name(name: str, lowercase_words: set[str]) -> bool:
 
 def _person_spans(text: str, lowercase_words: set[str]) -> list[tuple[int, int]]:
     analyzer = _analyzer()
-    if analyzer is None:
-        return []
     vocab = risk.vocabulary()
     known = _known(text, vocab["majors"] + vocab["affiliations"])  # "Wayfinding: Studio" is not a person
     spans = []
