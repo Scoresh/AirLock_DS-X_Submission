@@ -32,7 +32,7 @@ const LOSS = {
   affiliation: "affiliation → omitted",
   begincol: "transfer history → omitted",
 };
-const ID_LABEL = { PERSON: "name", EMAIL: "email", PHONE: "phone number", STUDENT_ID: "student ID", OTHER: "identifier" };
+const ID_LABEL = { PERSON: "name", EMAIL: "email", PHONE: "phone number", STUDENT_ID: "student ID", SECTION: "course section", OTHER: "identifier" };
 const RISK_TEXT = { high: "High risk", medium: "Medium risk", low: "Low risk" };
 const RISK_ORDER = { high: 0, medium: 1, low: 2 };
 
