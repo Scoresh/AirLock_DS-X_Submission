@@ -24,6 +24,7 @@ BU_ID = re.compile(r"\bU\d{8}\b")
 PARTICIPANT = re.compile(r"\b(?:Participant\s+|P)(\d{1,3})\b")
 PARTICIPANT_TOKEN = re.compile(r"\[(PARTICIPANT_\d{2,3})\]")
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+LINE_BREAK = re.compile(r"(?<!\n)\n(?!\n)")  # a single newline inside a paragraph
 NAME_SHAPE = re.compile(r"[A-Z][a-z'’-]+(?: [A-Z][a-z'’-]+){0,3}")
 
 AGE = re.compile(r"\b(\d{2})-year-old\b|\baged?\s+(\d{2})\b")
@@ -193,7 +194,8 @@ def scrub(parsed: ParseResult) -> ScrubResult:
     tok = _Tokenizer()
     pages, identifiers = [], []
     for page in parsed.pages:
-        text, found = _tokenize_page(page.text, tok)
+        # PDF text breaks lines mid-sentence; join them so rules and rewrites see whole phrases.
+        text, found = _tokenize_page(LINE_BREAK.sub(" ", page.text), tok)
         pages.append(ScrubbedPage(page=page.page, text=text))
         identifiers += [DirectIdentifier(token=t, type=kind, page=page.page) for t, kind in found]
 
