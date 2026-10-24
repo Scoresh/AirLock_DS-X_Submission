@@ -40,6 +40,28 @@ def _label_position(rect: fitz.Rect, page: fitz.Rect) -> str:
     return f"{vertical}-{horizontal}"
 
 
+def _paragraphs(body: list) -> list[str]:
+    """Join blocks that are consecutive lines of one paragraph.
+
+    Some PDF writers emit every justified line as its own block; without this, sentences
+    (and names) would be split by paragraph breaks at every line end.
+    """
+    paras: list[tuple[fitz.Rect, list[str], float]] = []
+    for rect, block in body:
+        lines = ["".join(s["text"] for s in line["spans"]).strip() for line in block["lines"]]
+        last = block["lines"][-1]["bbox"]
+        line_h = last[3] - last[1]
+        if paras:
+            prev, prev_lines, prev_h = paras[-1]
+            close = 0 <= rect.y0 - prev.y1 < 0.5 * prev_h
+            aligned = abs(rect.x0 - prev.x0) < 0.25 * PT_PER_IN
+            if close and aligned:
+                paras[-1] = (prev | rect, prev_lines + lines, line_h)
+                continue
+        paras.append((rect, lines, line_h))
+    return ["\n".join(l for l in lines if l) for _, lines, _ in paras]
+
+
 def _parse_page(page: fitz.Page, number: int) -> Page:
     area = page.rect
     band = LABEL_BAND_IN * PT_PER_IN
@@ -71,10 +93,7 @@ def _parse_page(page: fitz.Page, number: int) -> Page:
     else:  # blank page
         margins = Margins(top=0, bottom=0, left=0, right=0)
 
-    text = "\n\n".join(
-        "\n".join("".join(s["text"] for s in line["spans"]) for line in block["lines"]).strip()
-        for _, block in body
-    )
+    text = "\n\n".join(_paragraphs(body))
     return Page(
         page=number,
         text=text,

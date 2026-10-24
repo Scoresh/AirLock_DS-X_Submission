@@ -75,13 +75,13 @@ def status():
     return {"model": review.model_config(), "setup": scrub.setup_status()}
 
 
-SAMPLE_PDF = Path(__file__).resolve().parents[2] / "samples" / "test-thesis.pdf"
+SAMPLE_PDF = Path(__file__).resolve().parents[2] / "samples" / "demo-thesis.pdf"  # see scripts/make_demo_thesis.py
 
 
 @app.get("/sample", response_class=FileResponse)
 def sample():
     """The test thesis, so the UI can offer an explicit "Open sample document" action."""
-    return FileResponse(SAMPLE_PDF, media_type="application/pdf", filename="test-thesis.pdf")
+    return FileResponse(SAMPLE_PDF, media_type="application/pdf", filename="demo-thesis.pdf")
 
 
 @app.get("/llm-view/{doc_id}")
