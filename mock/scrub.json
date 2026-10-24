@@ -1,0 +1,20 @@
+{
+  "doc_id": "demo",
+  "scrubbed_pages": [
+    {"page": 1, "text": "THE NIGHT SKY AS A LEARNING SPACE\nA thesis submitted ..."},
+    {"page": 4, "text": "[PARTICIPANT_03], a 22-year-old astronomy major from Iceland, lives in campus housing and plays on the varsity soccer team."},
+    {"page": 12, "text": "Appendix B. Interview scheduling was handled by [PERSON_01] ([EMAIL_01])."}
+  ],
+  "direct_identifiers": [
+    {"token": "[PERSON_01]", "type": "PERSON", "page": 12},
+    {"token": "[EMAIL_01]", "type": "EMAIL", "page": 12}
+  ],
+  "participants": [
+    {
+      "id": "PARTICIPANT_03",
+      "pages": [4],
+      "attributes": {"IRage": 22, "country22": "Iceland", "MAJfirstcode": "Astronomy", "living18": "Campus housing", "athlete": 1},
+      "evidence": [{"page": 4, "quote": "a 22-year-old astronomy major from Iceland, lives in campus housing and plays on the varsity soccer team"}]
+    }
+  ]
+}
