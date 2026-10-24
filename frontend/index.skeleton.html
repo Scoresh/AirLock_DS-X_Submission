@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stranger Mode</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 16px; color: #1a1a1a; background: #fff; }
+  section { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+  .high { color: #b00020; } .medium { color: #a15c00; } .low { color: #1b7f3b; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+  .tile { border: 1px solid #ccc; border-radius: 6px; padding: 8px; text-align: center; cursor: pointer; }
+  .tile.risk { background: #fde2e4; } .tile.rubric { background: #fff4cc; } .tile.both { background: linear-gradient(135deg, #fde2e4 50%, #fff4cc 50%); }
+  .side { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; } .side pre { white-space: pre-wrap; background: #f6f6f6; padding: 8px; }
+  button:disabled { opacity: .5; }
+</style>
+</head>
+<body>
+<h1>Stranger Mode</h1>
+<p>Skeleton UI for testing the pipeline end to end. Replace freely.</p>
+
+<section>
+  <h2>1. Upload</h2>
+  <input type="file" id="pdf" accept="application/pdf"> <button id="go">Scrub locally</button>
+</section>
+
+<section id="gate" hidden>
+  <h2>2. Privacy gate</h2>
+  <div id="people"></div>
+  <button id="accept">Accept all suggestions</button>
+  <button id="send" disabled>Send scrubbed text for rubric review</button>
+</section>
+
+<section id="heat" hidden>
+  <h2>3. Submission heatmap</h2>
+  <div class="grid" id="tiles"></div>
+  <div id="detail"></div>
+</section>
+
+<section id="llmview" hidden>
+  <h2>What the LLM saw</h2>
+  <div id="pages"></div>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const api = (path, body) => fetch(path, {
+  method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+}).then(async (r) => { if (!r.ok) throw new Error((await r.json()).detail); return r.json(); });
+
+let docId, scrubbed, scored;
+
+$("go").onclick = async () => {
+  const form = new FormData();
+  form.append("file", $("pdf").files[0] || new Blob(["%PDF-mock"], { type: "application/pdf" }), "doc.pdf");
+  const parsed = await fetch("/parse", { method: "POST", body: form }).then((r) => r.json());
+  docId = parsed.doc_id;
+  scrubbed = await api(`/scrub/${docId}`);
+  await rescore([]);
+  showLlmView();
+};
+
+async function rescore(accepted) {
+  scored = await api("/score", { doc_id: docId, accepted });
+  $("gate").hidden = false;
+  $("people").innerHTML = scored.participants.map((p) => `
+    <p><b>${p.id}</b>: <span class="${p.risk}">${p.risk} risk (k ≈ ${p.k})</span><br>
+    ${Object.entries(p.attributes).map(([k, v]) => `${k}=${v}`).join(", ")}<br>
+    ${p.suggestions.map((s) => `→ change "${s.from}" to "${s.to}" (k ≈ ${s.new_k})`).join("<br>")}</p>`).join("");
+  $("send").disabled = !scored.gate_open;
+}
+
+$("accept").onclick = () => rescore(scored.participants.flatMap((p) =>
+  p.suggestions.map((s) => ({ participant_id: p.id, field: s.field }))));
+
+$("send").onclick = async () => {
+  const review = await api("/review", { doc_id: docId });
+  const riskPages = new Set(scrubbed.participants.flatMap((p) => p.pages).concat(scrubbed.direct_identifiers.map((d) => d.page)));
+  const byPage = Object.groupBy(review.findings, (f) => f.page);
+  const pages = [...new Set([...riskPages, ...Object.keys(byPage).map(Number)])].sort((a, b) => a - b);
+  $("heat").hidden = false;
+  $("tiles").innerHTML = pages.map((n) => {
+    const cls = riskPages.has(n) && byPage[n] ? "both" : riskPages.has(n) ? "risk" : "rubric";
+    return `<div class="tile ${cls}" data-page="${n}">p. ${n}</div>`;
+  }).join("");
+  $("tiles").onclick = (e) => {
+    const n = Number(e.target.dataset.page);
+    if (!n) return;
+    $("detail").innerHTML = `<h3>Page ${n}</h3>` + (byPage[n] || []).map((f) =>
+      `<p><b>[${f.source}] ${f.issue}</b><br><small>Rule: ${f.criterion}</small></p>`).join("");
+  };
+};
+
+async function showLlmView() {
+  const view = await fetch(`/llm-view/${docId}`).then((r) => r.json());
+  $("llmview").hidden = false;
+  $("pages").innerHTML = view.pages.map((p) => `
+    <h4>Page ${p.page}</h4>
+    <div class="side"><div><small>Original (stays here)</small><pre>${p.original}</pre></div>
+    <div><small>Sent to LLM</small><pre>${p.sent_to_llm}</pre></div></div>`).join("");
+}
+</script>
+</body>
+</html>
