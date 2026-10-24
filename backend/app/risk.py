@@ -15,6 +15,9 @@ Quasi-identifiers and how each can be made vaguer (OMIT = drop the detail):
     Class           first-year / senior    (kept: already coarse)
 """
 import os
+import base64
+import gzip
+import io
 from functools import lru_cache
 from pathlib import Path
 
@@ -64,9 +67,14 @@ def _field_of(major: pd.Series) -> pd.Series:
 def population() -> pd.DataFrame:
     if not DATA_FILE.exists():
         raise FileNotFoundError(f"put the organizers' NSSE-synthetic.csv in {DATA_FILE.parent}")
-    raw = pd.read_csv(DATA_FILE, na_values=["#NULL!", " ", "-9"], low_memory=False,
-                      usecols=["Class", "affiliation", "MAJfirst", "MAJsecond", "MAJnum", "begincol"])
+    source = DATA_FILE.read_bytes()
+    if source.startswith(b"H4sI"):  # gzip + base64 text, small enough for a Render secret file
+        source = gzip.decompress(base64.b64decode(source))
+    raw = pd.read_csv(io.BytesIO(source), na_values=["#NULL!", " ", "-9"], low_memory=False)
+    # Aggregated files (scripts/make_render_data.py) carry a count per combination in "n".
+    weight = raw["n"] if "n" in raw.columns else pd.Series(1, index=raw.index)
     return pd.DataFrame({
+        "n": weight,
         "Class": raw["Class"].map(CLASS_LABEL),
         "affiliation": raw["affiliation"],
         "MAJfirst": raw["MAJfirst"],
@@ -104,7 +112,7 @@ def k_value(profile: dict[str, str]) -> int:
     mask = pd.Series(True, index=df.index)
     for field, value in profile.items():
         mask &= df[field] == value
-    return int(mask.sum())
+    return int(df.loc[mask, "n"].sum())
 
 
 def phrase(field: str, new_field: str, value: str | None) -> str:
