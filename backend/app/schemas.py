@@ -115,6 +115,17 @@ class ScoreRequest(BaseModel):
 
 # ---------- 4. review (owner: Dan) ----------
 
+class BBox(BaseModel):
+    """A rectangle on a page, in PDF points (72 per inch), origin at top-left.
+
+    The frontend scales these to its rendered page width.
+    """
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+
+
 class Finding(BaseModel):
     page: int
     quote: str | None = None
@@ -122,6 +133,8 @@ class Finding(BaseModel):
     issue: str
     severity: Literal["error", "warning"]
     source: Literal["rule", "llm"]
+    bbox: list[BBox] = []  # regions to highlight; empty = page-level, render as a badge.
+                           # A quote that wraps across lines yields one box per line.
 
 
 class ReviewResult(BaseModel):
