@@ -1,4 +1,4 @@
-"""Stranger Mode local API.  Owner: Dan.
+"""StrangerThesis local API.  Owner: Dan.
 
 Run from /backend:  uvicorn app.main:app --reload
 Docs:               http://127.0.0.1:8000/docs
@@ -15,7 +15,7 @@ from . import format_rules, review, risk, scrub, store
 from .parse import ParseError, parse_pdf
 from .schemas import ParseResult, ReviewRequest, ReviewResult, ScoreRequest, ScoreResult, ScrubResult
 
-app = FastAPI(title="Stranger Mode")
+app = FastAPI(title="StrangerThesis")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 

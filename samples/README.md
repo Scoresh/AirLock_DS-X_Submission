@@ -8,13 +8,13 @@
 
 | Where | What | Expected |
 |---|---|---|
-| p.2 | Participant 3: 19-year-old sophomore, ethnic studies, from Iceland, campus housing | k = 1, high; after 2 "accept all" clicks k = 74 |
-| p.2 | Participant 5: senior, economics, off campus | k = 69, low (control) |
-| p.2 | Participant 7: 20-year-old sophomore, biomedical engineering, from Sweden, campus housing | k = 1, high; then 2, then 32 |
-| p.2 | Participant 9: 19-year-old first-year, physics, campus housing, varsity athlete | k = 1, high; then 20 |
+| p.2 | Participant 3: senior, Gray mouse lemur, double major (Clockmaking: Technology + Orchard Management: Technology), transfer student | k = 1, high; one "Apply all" → 7 (medium, gate opens); another → 1,234 |
+| p.2 | Participant 5: first-year, Ring-tailed lemur, Tea Sciences: Policy | k = 331, low (control) |
+| p.2 | Participant 7: first-year, Diademed sifaka, Lighthouse Engineering: Methods | k = 1, high; one "Apply all" → 150 |
+| p.2 | Participant 9: senior, Aye-aye, Wayfinding: Studio, transfer student | k = 1, high; one "Apply all" → 176 |
 | p.4 | Maya Lindqvist, mlindq@bu.edu, 617-555-0142 | all become tokens; "Maya" alone reuses the same token |
 
-Participants are real rows of the fallback population, so k is never 0.
+Participants are real rows of the organizers' NSSE synthetic data, so k is never 0.
 
 ## Planted formatting problems (for format_rules.py and the LLM review)
 
@@ -29,6 +29,6 @@ Participants are real rows of the fallback population, so k is never 0.
 
 Use this sentence shape so the rules catch every detail:
 
-> Participant N, a 19-year-old sophomore majoring in ethnic studies from Iceland, lives in campus housing.
+> Participant N, a senior who identifies as Aye-aye, is majoring in Wayfinding: Studio with a second major in Tea Sciences: Policy and transferred from another college.
 
-Pick people from `data/population-synthetic.csv` so their k starts at 1 or more.
+Pick people from `data/NSSE-synthetic.csv` so their k starts at 1 or more.

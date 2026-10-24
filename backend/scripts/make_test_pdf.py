@@ -3,12 +3,12 @@
 Writes samples/test-thesis.pdf and mock/parse.json (the same pages, as parse.py
 should return them), so the test page and parse.py work on identical content.
 
-Participants are real rows of the fallback population (scripts/make_population.py),
+Participants are real rows of the organizers' NSSE synthetic data (data/NSSE-synthetic.csv),
 so their k-values are at least 1:
-    Participant 3  student 3459  high risk -> low after rewrites (k 1 -> 4 -> 74)
-    Participant 5  control       low risk
-    Participant 7  student 54    high risk -> low
-    Participant 9  student 3490  high risk -> low
+    Participant 3  senior, double major, transfer   high risk; low after five rewrites (k 1 -> 104)
+    Participant 5  control                          low risk (k 331)
+    Participant 7  first-year                       high risk; low after two rewrites (k 1 -> 150)
+    Participant 9  senior, transfer                 high risk; low after two rewrites (k 1 -> 21)
 
 Run from /backend:  python scripts/make_test_pdf.py
 """
@@ -36,13 +36,15 @@ PAGES = [
     {
         "text": "Chapter 2. Methods\n\n"
                 "We interviewed four undergraduates about where they study at night. "
-                "Participant 3, a 19-year-old sophomore majoring in ethnic studies from Iceland, "
-                "lives in campus housing. "
-                "Participant 5 is a senior majoring in economics who lives off campus. "
-                "Participant 7, a 20-year-old sophomore majoring in biomedical engineering from Sweden, "
-                "lives in campus housing. "
-                "Participant 9, a 19-year-old first-year majoring in physics, lives in campus housing "
-                "and is a varsity athlete.",
+                "Participant 3, a senior who identifies as Gray mouse lemur, is majoring in "
+                "Clockmaking: Technology with a second major in Orchard Management: Technology "
+                "and transferred from another college. "
+                "Participant 5 is a first-year majoring in Tea Sciences: Policy who identifies as "
+                "Ring-tailed lemur. "
+                "Participant 7 is a first-year majoring in Lighthouse Engineering: Methods who "
+                "identifies as Diademed sifaka. "
+                "Participant 9, a senior majoring in Wayfinding: Studio, identifies as Aye-aye "
+                "and transferred from another college.",
         "margins": {"top": 1.0, "bottom": 1.0, "left": 1.5, "right": 1.0},
         "font": ("tiro", "Times-Roman", 12),
         "label": ("1", "bottom-center"),
@@ -51,7 +53,7 @@ PAGES = [
         "text": "Chapter 3. Findings\n\n"
                 "Most participants preferred quiet spaces after 10 PM. Participant 3 described the "
                 "library basement as the only place that felt calm during exam weeks, while "
-                "Participant 9 studied in team facilities between practices.",
+                "Participant 9 studied in the transfer-student lounge between classes.",
         "margins": {"top": 1.0, "bottom": 1.0, "left": 0.75, "right": 1.0},  # planted: margin too small
         "font": ("tiro", "Times-Roman", 12),
         "label": ("2", "top-right"),  # planted: page number moves

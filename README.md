@@ -1,4 +1,4 @@
-# Stranger Mode
+# StrangerThesis
 
 Scrub a document on your own machine, check who in it could be re-identified, and only then send it to an LLM for rubric review.
 
@@ -14,9 +14,9 @@ Everything runs locally unless marked otherwise.
 | Name detection | Microsoft Presidio + spaCy `en_core_web_sm` (small local NLP model, not an LLM) |
 | Emails, phones, BU IDs | Regex |
 | Participant profiles | Rule-based extraction (patterns like "19-year-old", "majoring in…", "from…") |
-| Re-identification risk | pandas: k = number of matching students in the population |
-| Reference population | NSSE codebook fields; fallback synthetic data generated with numpy (organizers' NSSE data once we have access) |
-| Generalization | NSSE's own coarser fields (age → age band, country → region → "international", major → major group) + fixed rewrite phrases |
+| Re-identification risk | pandas: k = number of matching respondents in the reference data |
+| Reference population | Organizers' NSSE synthetic data: 20,731 fictional respondents (git-ignored, ask Selina) |
+| Generalization | Major → its field → omitted; second major → field → "another field"; affiliation and transfer history → omitted |
 | Token storage | Local JSON key file in `keys/`, git-ignored, never sent anywhere |
 | PDF | PyMuPDF (test PDF built; parsing in progress) |
 | Frontend | Plain HTML + JavaScript test page (heatmap, side-by-side view) |
@@ -32,7 +32,7 @@ cd backend
 python3.13 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
-python scripts/make_population.py
+cp ~/Downloads/NSSE-synthetic.csv ../data/NSSE-synthetic.csv   # the organizers' file
 uvicorn app.main:app --reload
 ```
 
@@ -70,21 +70,21 @@ Defined in `backend/app/schemas.py`, with examples in `mock/`:
 - `review.py` receives only `ScrubResult`. Never pass original page text to the LLM.
 - No external API calls anywhere except the configured LLM endpoint in `review.py`.
 
-## NSSE fields we score on
+## What we score on
 
-From the NSSE 2026 US codebook (`docs/`). Check which ones the organizers' synthetic data actually has.
+The organizers' NSSE synthetic data (`data/NSSE-synthetic.csv`, 20,731 respondents, 2014–2024) is fictional by design:
+majors are invented ("Clockmaking: Technology") and lemur species stand in for an identity group.
 
-| Detail | Exact | Coarser |
+| Detail | Column | Made vaguer to |
 |---|---|---|
-| Age | `IRage` | `IRagecol` |
-| Country | `country22` | `countrycol22` → `internat26` |
-| Major | `MAJfirstcode` | `MAJfirstcol` |
-| Class | `class` | |
-| Sex | `IRsex19` | |
-| Housing | `living18` | |
-| Athlete / Greek / first-gen | `athlete`, `gr_all24`, `firstgen` | |
+| Class year | `Class` | (kept) |
+| Major | `MAJfirst` | its field (`Clockmaking`) → omitted |
+| Second major | `MAJsecond` | its field → "another field" |
+| Affiliation | `affiliation` | omitted |
+| Transfer student | `begincol` | omitted |
 
-k = sum of `WEIGHT2` over matching rows (`WEIGHT2` scales respondents up to the school's population).
+There are no weights; each row is one respondent, so k = number of matching rows.
+3,106 of the 4,610 combinations of these five details belong to exactly one respondent.
 
 Risk: k 1–4 high (blocks), 5–19 medium (warns), 20+ low.
 

@@ -1,60 +1,45 @@
 """k-value scoring, generalization suggestions, privacy gate.  Owner: Selina.
 
-k = sum of WEIGHT2 over population rows matching every attribute of a participant
-    (WEIGHT2 scales survey respondents up to the institution's population).
+Reference population: the organizers' NSSE synthetic data, data/NSSE-synthetic.csv
+(20,731 made-up respondents across six survey years; git-ignored, ask Selina for the file).
+It is a fictional world: majors like "Clockmaking: Theory" and lemur species standing in
+for an identity group. Each row is one respondent and there are no weights, so
 
-Population file, first one found in /data:
-    NSSE-synthetic.csv       organizers' data, once we have access
-    population-synthetic.csv fallback from scripts/make_population.py
+    k = number of respondents matching every detail of a participant's description.
 
-Generalization ladder (exact field -> coarser NSSE field):
-    IRage -> IRagecol
-    country22 -> countrycol22 -> internat
-    MAJfirstcode -> MAJfirstcol
+Quasi-identifiers and how each can be made vaguer (OMIT = drop the detail):
+    MAJfirst        "Clockmaking: Theory"  -> MAJfirstfield "Clockmaking" -> OMIT
+    MAJsecond       second major           -> MAJsecondfield              -> MAJnum "Double major"
+    affiliation     lemur species          -> OMIT
+    begincol        transferred in         -> OMIT
+    Class           first-year / senior    (kept: already coarse)
 """
 from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
 
-from . import nsse_codes as codes
 from .schemas import AcceptedFix, Risk, ScoredParticipant, ScoreResult, ScrubbedPage, ScrubResult, Suggestion
 
 HIGH_MAX_K = 4     # 1-4 blocks sending
 MEDIUM_MAX_K = 19  # 5-19 warns
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-POPULATION_FILES = ["NSSE-synthetic.csv", "population-synthetic.csv"]
+DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "NSSE-synthetic.csv"
 
+OMIT = ""
 LADDER = {
-    "IRage": "IRagecol",
-    "country22": "countrycol22",
-    "countrycol22": "internat",
-    "MAJfirstcode": "MAJfirstcol",
+    "MAJfirst": "MAJfirstfield",
+    "MAJfirstfield": OMIT,
+    "MAJsecond": "MAJsecondfield",
+    "MAJsecondfield": "MAJnum",
+    "affiliation": OMIT,
+    "begincol": OMIT,
 }
-
-# Attribute label tables: field -> {code: label}. Fields not listed hold 0/1 or an int.
-LABELS: dict[str, dict[int, str]] = {
-    "IRagecol": codes.AGE_CATEGORY,
-    "class": codes.CLASS,
-    "MAJfirstcode": codes.MAJOR,
-    "MAJfirstcol": codes.MAJOR_CATEGORY,
-    "country22": codes.COUNTRY,
-    "countrycol22": codes.REGION,
-    "living18": codes.LIVING,
-    "IRsex19": codes.SEX,
-}
-
-# How a coarser value reads in the rewritten sentence.
-PHRASES: dict[str, dict[int, str]] = {
-    "IRagecol": {1: "teenage", 2: "twenty-something", 3: "mid-to-late-20s", 4: "30-something",
-                 5: "middle-aged", 6: "older"},
-    "MAJfirstcol": {1: "humanities", 2: "life sciences", 3: "physical sciences",
-                    4: "social sciences", 5: "business", 6: "communications", 7: "education",
-                    8: "engineering", 9: "health", 10: "social service", 11: "interdisciplinary"},
-    "countrycol22": codes.REGION,
-}
-ABROAD = "abroad"
+OMITTED_TEXT = {"MAJfirstfield": "[major omitted]", "affiliation": "[affiliation omitted]",
+                "begincol": "[transfer history omitted]"}
+CLASS_LABEL = {"FY": "First-year", "SR": "Senior", "Other": "Other"}
+TRANSFERRED = "Started at another college"
+DOUBLE_MAJOR = "Double major"
 
 
 def risk_level(k: int) -> Risk:
@@ -65,75 +50,77 @@ def risk_level(k: int) -> Risk:
     return "low"
 
 
+def _field_of(major: pd.Series) -> pd.Series:
+    return major.str.split(":").str[0].str.strip()
+
+
 @lru_cache(maxsize=1)
 def population() -> pd.DataFrame:
-    for name in POPULATION_FILES:
-        path = DATA_DIR / name
-        if path.exists():
-            df = pd.read_csv(path, low_memory=False)
-            weight = next((c for c in df.columns if c.lower() == "weight2"), None)
-            df["_w"] = df[weight] if weight else 1.0
-            return df
-    raise FileNotFoundError(f"no population file in {DATA_DIR}; run scripts/make_population.py")
+    if not DATA_FILE.exists():
+        raise FileNotFoundError(f"put the organizers' NSSE-synthetic.csv in {DATA_FILE.parent}")
+    raw = pd.read_csv(DATA_FILE, na_values=["#NULL!", " ", "-9"], low_memory=False,
+                      usecols=["Class", "affiliation", "MAJfirst", "MAJsecond", "MAJnum", "begincol"])
+    return pd.DataFrame({
+        "Class": raw["Class"].map(CLASS_LABEL),
+        "affiliation": raw["affiliation"],
+        "MAJfirst": raw["MAJfirst"],
+        "MAJfirstfield": _field_of(raw["MAJfirst"]),
+        "MAJsecond": raw["MAJsecond"],
+        "MAJsecondfield": _field_of(raw["MAJsecond"]),
+        "MAJnum": raw["MAJnum"].map({1: "Single major", 2: DOUBLE_MAJOR}),
+        "begincol": raw["begincol"].map({0: "Started here", 1: TRANSFERRED}),
+    })
 
 
 @lru_cache(maxsize=1)
-def region_of_country() -> dict[int, int]:
+def vocabulary() -> dict[str, list[str]]:
+    """Values the text rules can recognise, longest first so "Tea Sciences: Policy" beats "Tea Sciences"."""
     df = population()
-    known = df[(df.country22 > 0) & (df.countrycol22 > 0)]
-    return known.groupby("country22").countrycol22.agg(lambda s: s.mode()[0]).to_dict()
+    by_length = lambda values: sorted(set(values.dropna()), key=len, reverse=True)  # noqa: E731
+    return {
+        "majors": by_length(pd.concat([df["MAJfirst"], df["MAJsecond"]])),
+        "affiliations": by_length(df["affiliation"]),
+    }
 
 
-def encode(field: str, value: str | int) -> int:
-    """Attribute label (as stored in ScrubResult) -> NSSE code."""
-    if field not in LABELS:
-        return int(value)
-    if isinstance(value, int):
-        return value
-    lookup = {label.lower(): code for code, label in LABELS[field].items()}
-    return lookup[str(value).lower()]
-
-
-def decode(field: str, code: int) -> str | int:
-    return LABELS[field][code] if field in LABELS else code
-
-
-def coarsen(field: str, code: int) -> int:
+def coarsen(field: str, value: str) -> tuple[str, str | None]:
+    """One step up the ladder: (new field, new value); new field OMIT drops the detail."""
     new_field = LADDER[field]
-    if new_field == "IRagecol":
-        return codes.age_category(code)
-    if new_field == "MAJfirstcol":
-        return codes.major_category(code)
-    if new_field == "countrycol22":
-        return region_of_country().get(code, 8)  # 8 = unknown region
-    return 1  # internat: they are an international student
+    if new_field in ("MAJfirstfield", "MAJsecondfield"):
+        return new_field, value.split(":")[0].strip()
+    if new_field == "MAJnum":
+        return new_field, DOUBLE_MAJOR
+    return OMIT, None
 
 
-def k_value(profile: dict[str, int]) -> int:
+def k_value(profile: dict[str, str]) -> int:
     df = population()
     mask = pd.Series(True, index=df.index)
-    for field, code in profile.items():
-        if field in df.columns:
-            mask &= df[field] == code
-    return int(round(df.loc[mask, "_w"].sum()))
+    for field, value in profile.items():
+        mask &= df[field] == value
+    return int(mask.sum())
 
 
-def phrase(field: str, code: int) -> str:
-    if field == "internat":
-        return ABROAD
-    return PHRASES.get(field, {}).get(code) or str(decode(field, code))
+def phrase(field: str, new_field: str, value: str | None) -> str:
+    """How the vaguer detail reads in the rewritten sentence."""
+    if new_field == OMIT:
+        return OMITTED_TEXT[field]
+    if new_field == "MAJnum":
+        return "another field"
+    return value
 
 
-def _generalize(profile: dict[str, int], mentions: dict[str, str], field: str) -> list[tuple[str, str]]:
+def _generalize(profile: dict[str, str], mentions: dict[str, str], field: str) -> list[tuple[str, str]]:
     """Apply one ladder step in place; return the text replacements it implies."""
-    new_field = LADDER[field]
-    new_code = coarsen(field, profile.pop(field))
-    profile[new_field] = new_code
+    new_field, new_value = coarsen(field, profile.pop(field))
+    if new_field != OMIT:
+        profile[new_field] = new_value
     rewrites = []
     if field in mentions:
-        old_text, new_text = mentions.pop(field), phrase(new_field, new_code)
+        old_text, new_text = mentions.pop(field), phrase(field, new_field, new_value)
         rewrites.append((old_text, new_text))
-        mentions[new_field] = new_text
+        if new_field != OMIT:
+            mentions[new_field] = new_text
     return rewrites
 
 
@@ -141,7 +128,7 @@ def _replay(scrubbed: ScrubResult, accepted: list[AcceptedFix]):
     """Current profile, mentions and text rewrites per participant after all accepted fixes."""
     state = {}
     for p in scrubbed.participants:
-        profile = {f: encode(f, v) for f, v in p.attributes.items()}
+        profile = {f: str(v) for f, v in p.attributes.items()}
         mentions = dict(p.mentions)
         rewrites: list[tuple[str, str]] = []
         for fix in accepted:
@@ -152,19 +139,21 @@ def _replay(scrubbed: ScrubResult, accepted: list[AcceptedFix]):
 
 
 def score(scrubbed: ScrubResult, accepted: list[AcceptedFix]) -> ScoreResult:
+    replays = _replay(scrubbed, accepted)
     participants = []
     for p in scrubbed.participants:
-        profile, mentions, _ = _replay(scrubbed, accepted)[p.id]
+        profile, mentions, _ = replays[p.id]
         k = k_value(profile)
         suggestions = []
         for field in [f for f in profile if f in LADDER]:
-            trial, trial_mentions = dict(profile), dict(mentions)
-            _generalize(trial, trial_mentions, field)
-            new_field = LADDER[field]
+            trial = dict(profile)
+            new_field, new_value = coarsen(field, trial.pop(field))
+            if new_field != OMIT:
+                trial[new_field] = new_value
             suggestions.append(Suggestion(
                 field=field,
-                from_=str(decode(field, profile[field])),
-                to=str(decode(new_field, trial[new_field])) if new_field != "internat" else "international student",
+                from_=profile[field],
+                to=new_value if new_field != OMIT else "omitted",
                 new_field=new_field,
                 new_k=k_value(trial),
             ))
@@ -173,7 +162,7 @@ def score(scrubbed: ScrubResult, accepted: list[AcceptedFix]) -> ScoreResult:
             id=p.id,
             k=k,
             risk=risk_level(k),
-            attributes={f: decode(f, c) for f, c in profile.items()},
+            attributes=profile,
             suggestions=suggestions if risk_level(k) != "low" else [],
         ))
     return ScoreResult(
