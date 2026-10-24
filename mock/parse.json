@@ -3,32 +3,94 @@
   "pages": [
     {
       "page": 1,
-      "text": "THE NIGHT SKY AS A LEARNING SPACE\nA thesis submitted ...",
+      "text": "LEARNING UNDER THE NIGHT SKY:\nSTUDENT EXPERIENCES OF CAMPUS STUDY SPACES\n\nA thesis submitted in partial fulfillment of the requirements\nfor the degree of Bachelor of Arts\n\nBoston University\n2026",
       "layout": {
-        "width_in": 8.5, "height_in": 11,
-        "margins_in": {"top": 1.0, "bottom": 1.0, "left": 1.5, "right": 1.0},
-        "fonts": [{"name": "TimesNewRoman", "size": 12, "chars": 1840}],
-        "page_label": null, "page_label_position": null
+        "width_in": 8.5,
+        "height_in": 11,
+        "margins_in": {
+          "top": 2.0,
+          "bottom": 1.0,
+          "left": 1.5,
+          "right": 1.0
+        },
+        "fonts": [
+          {
+            "name": "Times-Roman",
+            "size": 12,
+            "chars": 194
+          }
+        ],
+        "page_label": null,
+        "page_label_position": null
+      }
+    },
+    {
+      "page": 2,
+      "text": "Chapter 2. Methods\n\nWe interviewed four undergraduates about where they study at night. Participant 3, a 19-year-old sophomore majoring in ethnic studies from Iceland, lives in campus housing. Participant 5 is a senior majoring in economics who lives off campus. Participant 7, a 20-year-old sophomore majoring in biomedical engineering from Sweden, lives in campus housing. Participant 9, a 19-year-old first-year majoring in physics, lives in campus housing and is a varsity athlete.",
+      "layout": {
+        "width_in": 8.5,
+        "height_in": 11,
+        "margins_in": {
+          "top": 1.0,
+          "bottom": 1.0,
+          "left": 1.5,
+          "right": 1.0
+        },
+        "fonts": [
+          {
+            "name": "Times-Roman",
+            "size": 12,
+            "chars": 485
+          }
+        ],
+        "page_label": "1",
+        "page_label_position": "bottom-center"
+      }
+    },
+    {
+      "page": 3,
+      "text": "Chapter 3. Findings\n\nMost participants preferred quiet spaces after 10 PM. Participant 3 described the library basement as the only place that felt calm during exam weeks, while Participant 9 studied in team facilities between practices.",
+      "layout": {
+        "width_in": 8.5,
+        "height_in": 11,
+        "margins_in": {
+          "top": 1.0,
+          "bottom": 1.0,
+          "left": 0.75,
+          "right": 1.0
+        },
+        "fonts": [
+          {
+            "name": "Times-Roman",
+            "size": 12,
+            "chars": 237
+          }
+        ],
+        "page_label": "2",
+        "page_label_position": "top-right"
       }
     },
     {
       "page": 4,
-      "text": "Participant 3, a 22-year-old astronomy major from Iceland, lives in campus housing and plays on the varsity soccer team.",
+      "text": "Appendix B. Interview Logistics\n\nInterview scheduling was handled by Maya Lindqvist (mlindq@bu.edu, 617-555-0142). Maya also transcribed the recordings.",
       "layout": {
-        "width_in": 8.5, "height_in": 11,
-        "margins_in": {"top": 1.0, "bottom": 1.0, "left": 0.75, "right": 1.0},
-        "fonts": [{"name": "TimesNewRoman", "size": 12, "chars": 2310}],
-        "page_label": "4", "page_label_position": "bottom-center"
-      }
-    },
-    {
-      "page": 12,
-      "text": "Appendix B. Interview scheduling was handled by Maya Lindqvist (mlindq@bu.edu).",
-      "layout": {
-        "width_in": 8.5, "height_in": 11,
-        "margins_in": {"top": 1.0, "bottom": 1.0, "left": 1.5, "right": 1.0},
-        "fonts": [{"name": "Arial", "size": 11, "chars": 950}],
-        "page_label": "11", "page_label_position": "top-right"
+        "width_in": 8.5,
+        "height_in": 11,
+        "margins_in": {
+          "top": 1.0,
+          "bottom": 1.0,
+          "left": 1.5,
+          "right": 1.0
+        },
+        "fonts": [
+          {
+            "name": "Helvetica",
+            "size": 11,
+            "chars": 152
+          }
+        ],
+        "page_label": "3",
+        "page_label_position": "bottom-center"
       }
     }
   ]
