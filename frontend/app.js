@@ -1,4 +1,4 @@
-/* ThesisGuard workspace.
+/* StrangerThesis workspace.
    API (local FastAPI server):
      GET  /status                                    -> { model: { configured, model, endpoint } }
      GET  /sample                                    -> the test thesis PDF
@@ -19,16 +19,18 @@ const PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build";
 const TOKEN = /\[[A-Z_]+_\d+\]/g;
 const DIFF_LIMIT = 4_000_000;  // word pairs; longer pages skip the word diff
 
+// Column names of the organizers' NSSE synthetic data (see backend/app/risk.py).
 const FIELD_LABEL = {
-  IRage: "Age", IRagecol: "Age band", class: "Class year", MAJfirstcode: "Major", MAJfirstcol: "Major group",
-  country22: "Country", countrycol22: "Region", internat: "International student", living18: "Housing",
-  athlete: "Student-athlete", IRsex19: "Sex", firstgen: "First-generation",
+  Class: "Class year", affiliation: "Affiliation", MAJfirst: "Major", MAJfirstfield: "Major field",
+  MAJsecond: "Second major", MAJsecondfield: "Second major field", MAJnum: "Majors", begincol: "Started college",
 };
 const LOSS = {
-  IRage: "exact age → age band",
-  country22: "country → world region",
-  countrycol22: "region → “international student”",
-  MAJfirstcode: "major → major group",
+  MAJfirst: "major → its field",
+  MAJfirstfield: "major field → omitted",
+  MAJsecond: "second major → its field",
+  MAJsecondfield: "second major → “another field”",
+  affiliation: "affiliation → omitted",
+  begincol: "transfer history → omitted",
 };
 const ID_LABEL = { PERSON: "name", EMAIL: "email", PHONE: "phone number", STUDENT_ID: "student ID", OTHER: "identifier" };
 const RISK_TEXT = { high: "High risk", medium: "Medium risk", low: "Low risk" };
@@ -67,8 +69,7 @@ async function request(path, { method = "GET", body, form } = {}) {
 const participantName = (id) => `Participant ${Number(String(id).replace(/\D/g, ""))}`;
 const fileSize = (n) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-const fieldValue = (field, v) => (field === "internat" || field === "athlete" || field === "firstgen")
-  ? (Number(v) === 1 ? "Yes" : "No") : v;
+const fieldValue = (field, v) => v;
 
 function joinNames(names) {
   if (names.length < 2) return names.join("");
@@ -719,11 +720,12 @@ function renderPrivacyPanel() {
 
   $("panel-privacy").innerHTML = `
     <h2 class="panel__title">Privacy check</h2>
-    <p class="panel__intro">Each described participant is compared with a synthetic reference population.
+    <p class="panel__intro">Each described participant is compared with the organizers' NSSE synthetic data: 20,731 made-up respondents.
       <strong>k</strong> is the estimated number of people who fit the same description: the smaller it is, the easier that person is to single out.</p>
     <details class="explain"><summary>How to read k</summary>
       <p>k of 1–4: high risk, blocks review. k of 5–19: medium, a narrow group. k of 20 or more: low.
-      These are estimates from synthetic data, not counts of real students, and a low k is a reason to rewrite rather than proof of identification.</p></details>
+      These are estimates from synthetic data, not counts of real students, and a low k is a reason to rewrite rather than proof of identification.
+      The data is fictional by design: its majors are invented and lemur species stand in for an identity group.</p></details>
 
     <section class="panel__section">
       <span class="label">Direct identifiers</span>
@@ -734,7 +736,7 @@ function renderPrivacyPanel() {
     <section class="panel__section">
       <span class="label">Described participants</span>
       ${people.length ? people.map((p) => concernHtml(p, scored[p.id])).join("")
-        : `<p class="panel__empty">No participant descriptions were recognised. Descriptions are found when they name a participant, for example “Participant 3, a 19-year-old sophomore…”.</p>`}
+        : `<p class="panel__empty">No participant descriptions were recognised. Descriptions are found when they name a participant, for example “Participant 3, a senior majoring in Clockmaking: Technology who identifies as Aye-aye…”.</p>`}
       ${anySuggestions ? `<div class="panel__actions"><button type="button" class="btn btn--secondary" data-action="apply-all">Apply all suggestions</button></div>` : ""}
     </section>
     ${gateHtml()}`;

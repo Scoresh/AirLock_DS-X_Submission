@@ -1,0 +1,9 @@
+# Use the organizers' NSSE synthetic data and rename to StrangerThesis
+
+**Files changed:**
+- `backend/app/risk.py` (rewritten for the organizers' columns), `backend/app/scrub.py` (new profile rules)
+- `backend/app/nsse_codes.py`, `backend/scripts/make_population.py` (deleted: they matched the public codebook, not this data)
+- `backend/scripts/make_test_pdf.py`, `samples/test-thesis.pdf`, `samples/README.md`, `mock/parse.json`, `mock/scrub.json`, `mock/score.json`
+- `frontend/app.js`, `frontend/index.html`, `frontend/styles.css`, `frontend/index.skeleton.html`, `backend/app/main.py`, `README.md`, `data/README.md`, `.kiro/agents/*.json`, `.kiro/steering/project-conventions.md` (rename)
+
+The organizers' file (20,731 fictional respondents, 2014–2024) has no age, country, housing or weights; it has class year, invented majors, a second major, a lemur-species "affiliation" standing in for an identity group, and transfer status. The risk engine now scores those five details, with k as the plain count of matching respondents, and generalizes major → field → omitted, second major → field → "another field", and affiliation and transfer history → omitted (the rewritten sentence says "[affiliation omitted]" so the reader and the model can see a detail was removed). Text rules recognise majors and affiliations from the data's own vocabulary, and Presidio no longer treats them as names ("Wayfinding: Studio" was being tokenized as a person). The test thesis now describes four real rows: three start at k = 1 and one control at k = 331. The data file stays in the git-ignored `data/` folder. The product is renamed from ThesisGuard / Stranger Mode to StrangerThesis everywhere except past change logs. Checked in the browser: sample opens, single and bulk rewrites, gate opens with a medium-risk warning, local review runs, and the comparison shows the rewritten text.
