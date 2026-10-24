@@ -7,4 +7,9 @@ pymupdf==1.25.1
 
 presidio-analyzer==2.2.355
 spacy==3.8.16
+# preshed 3.0.11–3.0.14 wheels overflow in Tokenizer._flush_specials on Windows
+# (OverflowError: Python int too large to convert to C ssize_t). 3.0.9 is the
+# last wheel whose uint64 key conversion is correct. Do not bump without testing
+# `spacy.load("en_core_web_sm")`.
+preshed==3.0.9
 # then: python -m spacy download en_core_web_sm

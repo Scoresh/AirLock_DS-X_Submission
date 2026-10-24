@@ -36,3 +36,6 @@
 2026-10-24T17:40:52.4543827-04:00  tool=write  path=C:\Users\score\Desktop\Dev\kiroapps\DS+X_Hackathon_2026\backend\app\scrub.py
 2026-10-24T17:48:27.5349880-04:00  tool=write  path=C:\Users\score\Desktop\Dev\kiroapps\DS+X_Hackathon_2026\backend\scripts\run-server.bat
 2026-10-24T17:49:04.2114416-04:00  tool=write  path=C:\Users\score\Desktop\Dev\kiroapps\DS+X_Hackathon_2026\kiro_change_logs\2026-10-24_174658_add-windows-server-scripts.md
+2026-10-24T18:24:36.1163856-04:00  tool=write  path=C:\Users\score\Desktop\Dev\kiroapps\DS+X_Hackathon_2026\backend\requirements.txt
+2026-10-24T18:25:07.3331081-04:00  tool=write  path=C:\Users\score\Desktop\Dev\kiroapps\DS+X_Hackathon_2026\kiro_change_logs\2026-10-24_182030_fix-spacy-preshed-overflow.md
+2026-10-24T18:52:43.3038773-04:00  tool=write  path=C:\Users\score\Desktop\Dev\kiroapps\DS+X_Hackathon_2026\kiro_hackathon_qa.md
