@@ -5,11 +5,109 @@
       "id": "PARTICIPANT_03",
       "k": 1,
       "risk": "high",
-      "attributes": {"IRage": 22, "country22": "Iceland", "MAJfirstcode": "Astronomy", "living18": "Campus housing", "athlete": 1},
+      "attributes": {
+        "IRage": 19,
+        "class": "Sophomore",
+        "country22": "Iceland",
+        "MAJfirstcode": "Ethnic studies",
+        "living18": "Campus housing"
+      },
       "suggestions": [
-        {"field": "country22", "from": "Iceland", "to": "Europe", "new_field": "countrycol22", "new_k": 3},
-        {"field": "MAJfirstcode", "from": "Astronomy", "to": "Physical Sciences, Mathematics, and Computer Science", "new_field": "MAJfirstcol", "new_k": 6},
-        {"field": "IRage", "from": "22", "to": "20-23", "new_field": "IRagecol", "new_k": 2}
+        {
+          "field": "IRage",
+          "from": "19",
+          "to": "19 or younger",
+          "new_field": "IRagecol",
+          "new_k": 1
+        },
+        {
+          "field": "country22",
+          "from": "Iceland",
+          "to": "Europe",
+          "new_field": "countrycol22",
+          "new_k": 1
+        },
+        {
+          "field": "MAJfirstcode",
+          "from": "Ethnic studies",
+          "to": "Social Sciences",
+          "new_field": "MAJfirstcol",
+          "new_k": 1
+        }
+      ]
+    },
+    {
+      "id": "PARTICIPANT_05",
+      "k": 69,
+      "risk": "low",
+      "attributes": {
+        "class": "Senior",
+        "MAJfirstcode": "Economics",
+        "living18": "Within walking distance"
+      },
+      "suggestions": []
+    },
+    {
+      "id": "PARTICIPANT_07",
+      "k": 1,
+      "risk": "high",
+      "attributes": {
+        "IRage": 20,
+        "class": "Sophomore",
+        "country22": "Sweden",
+        "MAJfirstcode": "Biomedical engineering",
+        "living18": "Campus housing"
+      },
+      "suggestions": [
+        {
+          "field": "country22",
+          "from": "Sweden",
+          "to": "Europe",
+          "new_field": "countrycol22",
+          "new_k": 2
+        },
+        {
+          "field": "IRage",
+          "from": "20",
+          "to": "20-23",
+          "new_field": "IRagecol",
+          "new_k": 1
+        },
+        {
+          "field": "MAJfirstcode",
+          "from": "Biomedical engineering",
+          "to": "Engineering",
+          "new_field": "MAJfirstcol",
+          "new_k": 1
+        }
+      ]
+    },
+    {
+      "id": "PARTICIPANT_09",
+      "k": 1,
+      "risk": "high",
+      "attributes": {
+        "IRage": 19,
+        "class": "First-year",
+        "MAJfirstcode": "Physics",
+        "living18": "Campus housing",
+        "athlete": 1
+      },
+      "suggestions": [
+        {
+          "field": "MAJfirstcode",
+          "from": "Physics",
+          "to": "Physical Sciences, Mathematics, and Computer Science",
+          "new_field": "MAJfirstcol",
+          "new_k": 4
+        },
+        {
+          "field": "IRage",
+          "from": "19",
+          "to": "19 or younger",
+          "new_field": "IRagecol",
+          "new_k": 2
+        }
       ]
     }
   ],
