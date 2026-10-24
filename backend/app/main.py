@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from . import format_rules, review, risk, scrub, store
-from .parse import parse_pdf
+from .parse import ParseError, parse_pdf
 from .schemas import ParseResult, ReviewRequest, ReviewResult, ScoreRequest, ScoreResult, ScrubResult
 
 app = FastAPI(title="Stranger Mode")
@@ -29,7 +29,11 @@ def _state(doc_id: str, need: str) -> store.DocState:
 async def parse(file: UploadFile = File(...)):
     doc_id = uuid.uuid4().hex[:8]
     state = store.get(doc_id)
-    state.parsed = parse_pdf(await file.read(), doc_id)
+    try:
+        state.parsed = parse_pdf(await file.read(), doc_id)
+    except ParseError as err:
+        store.DOCS.pop(doc_id, None)
+        raise HTTPException(400, str(err)) from err
     return state.parsed
 
 
