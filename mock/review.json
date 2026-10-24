@@ -1,9 +1,9 @@
 {
   "doc_id": "demo",
   "findings": [
-    {"page": 4, "quote": null, "criterion": "Left margin must be at least 1.5 inches (binding edge)", "issue": "Left margin is 0.75 in", "severity": "error", "source": "rule"},
-    {"page": 12, "quote": null, "criterion": "Page numbers must be consistent in position", "issue": "Page number is top-right; earlier pages use bottom-center", "severity": "error", "source": "rule"},
-    {"page": 2, "quote": null, "criterion": "An abstract page must follow the title and copyright pages", "issue": "No abstract page found", "severity": "error", "source": "llm"},
-    {"page": 4, "quote": "Participant 3, a 22-year-old ...", "criterion": "Participant descriptions should follow APA reporting style", "issue": "Consider describing participants in aggregate in the Methods section", "severity": "warning", "source": "llm"}
+    {"page": 4, "quote": null, "criterion": "Left margin must be at least 1.5 inches (binding edge)", "issue": "Left margin is 0.75 in", "severity": "error", "source": "rule", "bbox": [{"x0": 54, "y0": 0, "x1": 108, "y1": 792}]},
+    {"page": 12, "quote": null, "criterion": "Page numbers must be consistent in position", "issue": "Page number is top-right; earlier pages use bottom-center", "severity": "error", "source": "rule", "bbox": [{"x0": 468, "y0": 18, "x1": 594, "y1": 54}]},
+    {"page": 2, "quote": null, "criterion": "An abstract page must follow the title and copyright pages", "issue": "No abstract page found", "severity": "error", "source": "llm", "bbox": []},
+    {"page": 4, "quote": "Participant 3, a 22-year-old astronomy major from Iceland, lives in campus housing and plays on the varsity soccer team.", "criterion": "Participant descriptions should follow APA reporting style", "issue": "Consider describing participants in aggregate in the Methods section", "severity": "warning", "source": "llm", "bbox": [{"x0": 108, "y0": 180, "x1": 540, "y1": 210}, {"x0": 108, "y0": 210, "x1": 432, "y1": 240}]}
   ]
 }
