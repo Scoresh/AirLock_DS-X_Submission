@@ -74,19 +74,41 @@ def _not_names() -> set[str]:
     return {v.lower() for v in vocab["affiliations"]} | {v.split(":")[0].strip().lower() for v in vocab["majors"]}
 
 
+class SetupError(RuntimeError):
+    """A local dependency is missing; scrubbing must stop rather than silently miss names."""
+
+
+SETUP_HINT = "In backend/: pip install -r requirements.txt, then python -m spacy download en_core_web_sm"
+
+
 @lru_cache(maxsize=1)
 def _analyzer():
-    """Presidio with the small spaCy model; None if it is not installed."""
+    """Presidio with the small spaCy model. Raises SetupError if either is missing."""
     try:
         from presidio_analyzer import AnalyzerEngine
         from presidio_analyzer.nlp_engine import NlpEngineProvider
-    except ImportError:
-        return None
-    provider = NlpEngineProvider(nlp_configuration={
-        "nlp_engine_name": "spacy",
-        "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
-    })
-    return AnalyzerEngine(nlp_engine=provider.create_engine(), supported_languages=["en"])
+    except ImportError as err:
+        raise SetupError(f"Name detection (Presidio) is not installed. {SETUP_HINT}") from err
+    try:
+        provider = NlpEngineProvider(nlp_configuration={
+            "nlp_engine_name": "spacy",
+            "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
+        })
+        return AnalyzerEngine(nlp_engine=provider.create_engine(), supported_languages=["en"])
+    except Exception as err:  # spaCy raises OSError for a missing model; Presidio may wrap it
+        raise SetupError(f"The spaCy model en_core_web_sm is missing. {SETUP_HINT}") from err
+
+
+def setup_status() -> dict:
+    """What the UI shows before upload, so a broken install is visible instead of silent."""
+    issues = []
+    try:
+        _analyzer()
+    except SetupError as err:
+        issues.append(str(err))
+    if not risk.DATA_FILE.exists():
+        issues.append("The reference data is missing: put the organizers' NSSE-synthetic.csv in data/ (ask Selina).")
+    return {"ready": not issues, "issues": issues}
 
 
 def _looks_like_name(name: str, lowercase_words: set[str]) -> bool:
@@ -99,8 +121,6 @@ def _looks_like_name(name: str, lowercase_words: set[str]) -> bool:
 
 def _person_spans(text: str, lowercase_words: set[str]) -> list[tuple[int, int]]:
     analyzer = _analyzer()
-    if analyzer is None:
-        return []
     vocab = risk.vocabulary()
     known = _known(text, vocab["majors"] + vocab["affiliations"])  # "Wayfinding: Studio" is not a person
     spans = []

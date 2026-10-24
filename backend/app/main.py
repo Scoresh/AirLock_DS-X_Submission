@@ -41,7 +41,10 @@ async def parse(file: UploadFile = File(...)):
 @app.post("/scrub/{doc_id}", response_model=ScrubResult)
 def run_scrub(doc_id: str):
     state = _state(doc_id, "parsed")
-    state.scrubbed = scrub.scrub(state.parsed)
+    try:
+        state.scrubbed = scrub.scrub(state.parsed)
+    except (scrub.SetupError, FileNotFoundError) as err:
+        raise HTTPException(503, str(err)) from err  # never return a scrub that skipped detection
     return state.scrubbed
 
 
@@ -68,8 +71,8 @@ def run_review(req: ReviewRequest):
 
 @app.get("/status")
 def status():
-    """Which review model is configured, so the UI can say where text would go."""
-    return {"model": review.model_config()}
+    """Which review model is configured, and whether local detection is fully installed."""
+    return {"model": review.model_config(), "setup": scrub.setup_status()}
 
 
 SAMPLE_PDF = Path(__file__).resolve().parents[2] / "samples" / "test-thesis.pdf"
