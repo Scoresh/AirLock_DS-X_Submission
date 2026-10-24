@@ -65,6 +65,7 @@ class Participant(BaseModel):
     pages: list[int]
     attributes: dict[str, str | int]  # keys are NSSE field names: IRage, country22, MAJfirstcode, ...
     evidence: list[Evidence]
+    mentions: dict[str, str] = {}  # NSSE field -> exact words in the scrubbed text, e.g. {"country22": "Iceland"}
 
 
 class ScrubResult(BaseModel):
