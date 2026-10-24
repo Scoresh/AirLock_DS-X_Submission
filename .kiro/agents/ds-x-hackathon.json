@@ -1,0 +1,16 @@
+{
+  "name": "ds-x-hackathon",
+  "description": "DS+X Hackathon 2026 agent. Auto-logs every file write to kiro_change_logs/.",
+  "tools": ["read", "write", "shell", "grep", "glob", "code"],
+  "resources": [
+    "file://.kiro/steering/**/*.md"
+  ],
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "write",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .kiro/hooks/log-write.ps1"
+      }
+    ]
+  }
+}
