@@ -51,7 +51,7 @@ class ScrubbedPage(BaseModel):
 
 class DirectIdentifier(BaseModel):
     token: str  # e.g. "[EMAIL_01]"; the original value lives only in keys/<doc_id>.json
-    type: Literal["PERSON", "EMAIL", "PHONE", "STUDENT_ID", "OTHER"]
+    type: Literal["PERSON", "EMAIL", "PHONE", "STUDENT_ID", "SECTION", "OTHER"]
     page: int
 
 

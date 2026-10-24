@@ -1,0 +1,6 @@
+# Catch accented and multi-part names, and course sections
+
+**Files changed:**
+- `backend/app/scrub.py`, `backend/app/schemas.py` (`DirectIdentifier.type` adds "SECTION"), `frontend/app.js`, `frontend/index.html`
+
+On a real lab report (ECE 401 PreLab 4) two of four names were left in: Presidio found "Richard A. Messner" and "Martínez de Fuenmayor", but our name-shape filter rejected middle initials, accents and particles like "de", and spaCy had dropped the first name "Yago". The filter now accepts those, and a detected name is extended left over a directly preceding capitalized word unless it is a title such as "Professor" or "Instructor". Course sections ("LAB Section: 04") are now replaced with a token, keeping the label. Loosening the filter let through false names, so three safeguards were added: candidates containing words like Appendix, Figure or Table are rejected; a candidate is rejected if all its words also appear in lowercase elsewhere in the document (equipment such as "Digital Multimeter"); and a single capitalized word is only tokenized when it is part of a full name already found (so "Maya" still is, "Banana" or "Desmos" is not). Result on the lab report: all four names and the section are tokens and nothing else is; the test thesis is unchanged.
