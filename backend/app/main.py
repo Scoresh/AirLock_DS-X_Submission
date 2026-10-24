@@ -43,8 +43,8 @@ def run_scrub(doc_id: str):
 @app.post("/score", response_model=ScoreResult)
 def run_score(req: ScoreRequest):
     state = _state(req.doc_id, "scrubbed")
-    state.accepted = req.accepted
-    state.scored = risk.score(state.scrubbed, req.accepted)
+    state.accepted += [fix for fix in req.accepted if fix not in state.accepted]
+    state.scored = risk.score(state.scrubbed, state.accepted)
     return state.scored
 
 
@@ -54,7 +54,8 @@ def run_review(req: ReviewRequest):
     if not state.scored.gate_open:
         raise HTTPException(403, "privacy gate is closed: accept fixes for high-risk participants first")
     findings = format_rules.run_all(state.parsed)
-    findings += review.restore(review.llm_review(state.scrubbed, req.rubric_text), req.doc_id)
+    sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
+    findings += review.restore(review.llm_review(sent, req.rubric_text), req.doc_id)
     return ReviewResult(doc_id=req.doc_id, findings=findings)
 
 
@@ -62,11 +63,12 @@ def run_review(req: ReviewRequest):
 def llm_view(doc_id: str):
     """Original vs. exactly what the LLM receives, for the side-by-side view."""
     state = _state(doc_id, "scrubbed")
+    sent = risk.rewrite(state.scrubbed, state.accepted)
     return {
         "doc_id": doc_id,
         "pages": [
             {"page": o.page, "original": o.text, "sent_to_llm": s.text}
-            for o, s in zip(state.parsed.pages, state.scrubbed.scrubbed_pages)
+            for o, s in zip(state.parsed.pages, sent.scrubbed_pages)
         ],
     }
 
