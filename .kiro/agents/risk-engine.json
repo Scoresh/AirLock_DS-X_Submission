@@ -5,7 +5,6 @@
   "tools": ["read", "write", "shell", "grep", "glob", "code"],
   "allowedTools": ["read", "grep", "glob", "code"],
   "resources": [
-    "file://basicoutline.txt",
     "file://.kiro/steering/**/*.md"
   ]
 }
