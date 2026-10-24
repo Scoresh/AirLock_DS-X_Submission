@@ -47,7 +47,7 @@ LABELS: dict[str, dict[int, str]] = {
 
 # How a coarser value reads in the rewritten sentence.
 PHRASES: dict[str, dict[int, str]] = {
-    "IRagecol": {1: "teenage", 2: "early-20s", 3: "mid-to-late-20s", 4: "30-something",
+    "IRagecol": {1: "teenage", 2: "twenty-something", 3: "mid-to-late-20s", 4: "30-something",
                  5: "middle-aged", 6: "older"},
     "MAJfirstcol": {1: "humanities", 2: "life sciences", 3: "physical sciences",
                     4: "social sciences", 5: "business", 6: "communications", 7: "education",
