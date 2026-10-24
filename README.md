@@ -1,8 +1,61 @@
 # StrangerThesis
 
-Scrub a document on your own machine, check who in it could be re-identified, and only then send it to an LLM for rubric review.
+Scrub a document on your own machine and check who in it could be re-identified.
 
 Scrubbing and risk scoring are real; PDF parsing and rubric review still return the example data in `/mock`. Replace one stub at a time with real code. As long as your function returns the same shape, nobody else's code breaks.
+
+## Running
+
+### macOS
+
+cd backend
+
+#### 1. Create and activate a virtual environment
+
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+#### 2. Install dependencies
+
+pip install --upgrade pip
+pip install -r requirements.txt
+
+#### 3. Download the local spaCy model (small NLP model, not an LLM)
+
+python -m spacy download en_core_web_sm
+
+#### 4. Add the organizers' reference data (ask Selina for the file)
+
+cp ~/Downloads/NSSE-synthetic.csv ../data/NSSE-synthetic.csv
+
+#### 5. Run the server
+uvicorn app.main:app --reload
+
+### Windows (PowerShell)
+
+cd backend
+
+#### 1. Create and activate a virtual environment
+
+py -3.12 -m venv .venv
+.venv\Scripts\Activate.ps1
+
+#### 2. Install dependencies
+
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+#### 3. Download the local spaCy model
+
+python -m spacy download en_core_web_sm
+
+#### 4. Add the organizers' reference data (ask Selina for the file)
+
+Copy-Item "$HOME\Downloads\NSSE-synthetic.csv" ..\data\NSSE-synthetic.csv
+
+#### 5. Run the server
+uvicorn app.main:app --reload
+
 
 ## Tech stack
 
