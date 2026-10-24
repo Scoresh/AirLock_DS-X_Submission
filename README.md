@@ -83,8 +83,7 @@ Use Python 3.13 (3.14 has no prebuilt pydantic-core wheel yet).
 ```bash
 cd backend
 python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python -m spacy download en_core_web_sm
+pip install -r requirements.txt   # includes the spaCy English model
 cp ~/Downloads/NSSE-synthetic.csv ../data/NSSE-synthetic.csv   # the organizers' file
 uvicorn app.main:app --reload
 ```

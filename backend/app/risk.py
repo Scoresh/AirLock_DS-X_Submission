@@ -25,8 +25,12 @@ from .schemas import AcceptedFix, Risk, ScoredParticipant, ScoreResult, Scrubbed
 HIGH_MAX_K = 4     # 1-4 blocks sending
 MEDIUM_MAX_K = 19  # 5-19 warns
 
-# NSSE_DATA_FILE lets a host (e.g. a Render secret file) supply the data outside the repo.
-DATA_FILE = Path(os.getenv("NSSE_DATA_FILE") or Path(__file__).resolve().parents[2] / "data" / "NSSE-synthetic.csv")
+# The data stays out of git. First match wins: NSSE_DATA_FILE, the repo's data/ folder,
+# then Render's secret-file mount (add a secret file named NSSE-synthetic.csv).
+_CANDIDATES = [os.getenv("NSSE_DATA_FILE"),
+               Path(__file__).resolve().parents[2] / "data" / "NSSE-synthetic.csv",
+               "/etc/secrets/NSSE-synthetic.csv"]
+DATA_FILE = next((Path(p) for p in _CANDIDATES if p and Path(p).exists()), Path(_CANDIDATES[1]))
 
 OMIT = ""
 LADDER = {
