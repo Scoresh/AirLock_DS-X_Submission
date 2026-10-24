@@ -58,7 +58,24 @@ function setStep(active) {
 }
 
 /* ---------- state ---------- */
-let docId, scrubbed, scored;
+let docId, scrubbed, scored, pdfDoc;
+
+// PDF.js draws pages in the browser for the heatmap; the file never leaves the machine.
+const PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build";
+const RENDER_WIDTH = 440;  // CSS px; finding boxes are scaled from PDF points to match
+const PT_PER_IN = 72;
+
+async function openPdf(file) {
+  if (!file) return null;
+  try {
+    const pdfjsLib = await import(`${PDFJS}/pdf.min.mjs`);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS}/pdf.worker.min.mjs`;
+    return await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  } catch (e) {
+    console.warn("PDF.js could not open the file; boxes will be drawn on a blank page.", e);
+    return null;
+  }
+}
 
 /* ---------- step 1: upload -> parse -> scrub -> score -> llm view ---------- */
 $("pdf").addEventListener("change", () => {
@@ -83,6 +100,7 @@ $("go").onclick = async () => {
       return r.json();
     });
     docId = parsed.doc_id;
+    pdfDoc = await openPdf($("pdf").files[0]);
     scrubbed = await api(`/scrub/${docId}`);
     await rescore([]);
     await showLlmView();
@@ -181,16 +199,20 @@ $("send").onclick = async () => {
       const findings = byPage[n] || [];
       $("detail").innerHTML = `<h3>Page ${esc(n)}</h3>` + (
         findings.length
-          ? findings.map((f) => `
-              <div class="finding">
+          ? findings.map((f, i) => `
+              <div class="finding" data-idx="${i}">
                 <div>
                   <span class="finding__src finding__src--${esc(f.source)}">${esc(f.source)}</span>
                   <span class="finding__issue">${esc(f.issue)}</span>
                 </div>
                 <div class="finding__rule">Rule: ${esc(f.criterion)}</div>
+                ${f.bbox && f.bbox.length ? "" : `<div class="finding__whole-page">Applies to the whole page</div>`}
               </div>`).join("")
           : `<p class="detail__empty">No rubric findings on this page — flagged for privacy risk only.</p>`
       );
+      $("detail").querySelectorAll(".finding").forEach((el) =>
+        el.onclick = () => highlight(Number(el.dataset.idx)));
+      renderPage(n, findings);
     };
 
     $("heat").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -222,4 +244,49 @@ async function showLlmView() {
         </div>
       </div>
     </div>`).join("");
+}
+
+/* ---------- heatmap level 2: page image with a box per finding ---------- */
+async function renderPage(n, findings) {
+  const wrap = $("canvasWrap");
+  const canvas = $("pageCanvas");
+  $("pageView").hidden = false;
+
+  // Scale maps PDF points to CSS pixels. Without the PDF (sample run) draw a blank Letter page.
+  let scale, widthPt = 8.5 * PT_PER_IN, heightPt = 11 * PT_PER_IN;
+  if (pdfDoc && n <= pdfDoc.numPages) {
+    const page = await pdfDoc.getPage(n);
+    const base = page.getViewport({ scale: 1 });
+    scale = RENDER_WIDTH / base.width;
+    const viewport = page.getViewport({ scale });
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  } else {
+    scale = RENDER_WIDTH / widthPt;
+    canvas.width = widthPt * scale; canvas.height = heightPt * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  wrap.querySelectorAll(".hot").forEach((el) => el.remove());
+  findings.forEach((f, i) => {
+    (f.bbox || []).forEach((b) => {
+      const el = document.createElement("div");
+      el.className = `hot hot--${f.severity}`;
+      el.style.left = `${b.x0 * scale}px`;
+      el.style.top = `${b.y0 * scale}px`;
+      el.style.width = `${(b.x1 - b.x0) * scale}px`;
+      el.style.height = `${(b.y1 - b.y0) * scale}px`;
+      el.dataset.idx = i;
+      el.title = f.issue;
+      el.onclick = () => highlight(i);
+      wrap.appendChild(el);
+    });
+  });
+}
+
+// Clicking a box or its finding highlights the pair.
+function highlight(idx) {
+  document.querySelectorAll("#detail .finding, #canvasWrap .hot").forEach((el) =>
+    el.classList.toggle("is-active", Number(el.dataset.idx) === idx));
 }
