@@ -178,7 +178,12 @@ button, input { font: inherit; color: inherit; }
   text-align: left; cursor: pointer; font-size: 13px; transition: background-color var(--ease);
 }
 .pagelist button:hover { background: var(--surface-2); }
-.pagelist button[aria-current="true"] { background: var(--surface); border-left-color: var(--pine); font-weight: 600; }
+.pagelist button { position: relative; padding-left: 14px; }
+.pagelist button[aria-current="true"] { background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule-strong); font-weight: 600; }
+.pagelist__bar { position: absolute; left: 3px; top: 5px; bottom: 5px; width: 4px; border-radius: 2px; }
+.pagelist__bar--risk { background: var(--brick); }
+.pagelist__bar--replaced { background: var(--pine); }
+.pagelist__bar--format { background: var(--ochre); }
 .pagelist__num { font-variant-numeric: tabular-nums; min-width: 34px; }
 .pagelist__marks { display: flex; gap: 4px; margin-left: auto; }
 .legend { margin-top: 10px; display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-2); }
@@ -189,6 +194,7 @@ button, input { font: inherit; color: inherit; }
   border-radius: 3px; font: 600 11px/1 var(--sans); font-variant-numeric: tabular-nums; border: 1px solid;
 }
 .mk--privacy { color: var(--brick); background: var(--brick-tint); border-color: rgba(154, 58, 44, .35); }
+.mk--replaced { color: var(--pine); background: var(--pine-tint); border-color: rgba(41, 77, 67, .35); }
 .mk--format { color: var(--ochre); background: var(--ochre-tint); border-color: rgba(125, 90, 16, .35); }
 .mk--model { color: var(--slate); background: var(--slate-tint); border-color: rgba(62, 83, 99, .35); }
 
@@ -218,7 +224,8 @@ button, input { font: inherit; color: inherit; }
 }
 .sheet.is-current .sheet__page { border-color: var(--rule-strong); }
 .sheet__edge { position: absolute; left: -10px; top: 0; bottom: 0; width: 3px; border-radius: 2px; }
-.sheet__edge--privacy { background: var(--brick); }
+.sheet__edge--risk { background: var(--brick); }
+.sheet__edge--replaced { background: var(--pine); }
 .sheet__edge--format { background: var(--ochre); }
 .sheet__canvas { display: block; width: 100%; height: auto; }
 .sheet__text {
