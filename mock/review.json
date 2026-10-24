@@ -1,0 +1,9 @@
+{
+  "doc_id": "demo",
+  "findings": [
+    {"page": 4, "quote": null, "criterion": "Left margin must be at least 1.5 inches (binding edge)", "issue": "Left margin is 0.75 in", "severity": "error", "source": "rule"},
+    {"page": 12, "quote": null, "criterion": "Page numbers must be consistent in position", "issue": "Page number is top-right; earlier pages use bottom-center", "severity": "error", "source": "rule"},
+    {"page": 2, "quote": null, "criterion": "An abstract page must follow the title and copyright pages", "issue": "No abstract page found", "severity": "error", "source": "llm"},
+    {"page": 4, "quote": "Participant 3, a 22-year-old ...", "criterion": "Participant descriptions should follow APA reporting style", "issue": "Consider describing participants in aggregate in the Methods section", "severity": "warning", "source": "llm"}
+  ]
+}
