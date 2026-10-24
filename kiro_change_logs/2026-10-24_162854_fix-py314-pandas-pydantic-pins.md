@@ -1,0 +1,6 @@
+# Fix pandas/pydantic pins for Python 3.14 (no source build)
+
+**Files changed:**
+- backend/requirements.txt
+
+The reported pandas meson build failure was caused by installing on Python 3.14.7, where the pinned `pandas==2.2.3` has no prebuilt cp314 wheel, so pip fell back to compiling from source and failed for lack of a C toolchain. Confirmed via `pip index versions`/`pip download --only-binary` that 2.2.3 has no 3.14 wheel but `pandas==2.3.3` ships `pandas-2.3.3-cp314-cp314-win_amd64.whl`. A full binary-only install then surfaced a second issue: `pydantic==2.10.4` requires `pydantic-core==2.27.2`, which also lacks a cp314 wheel; `pydantic==2.12.3` uses the cp314-ready `pydantic-core==2.41.4`. Bumped both pins in `backend/requirements.txt` (pandas 2.2.3 -> 2.3.3, pydantic 2.10.4 -> 2.12.3) with explanatory comments. Verified the entire requirements set installs from binary wheels only in a throwaway venv and that `app.main` imports and the `Suggestion` schema's `from` alias / `populate_by_name` behavior still work under pydantic 2.12.3. No data contracts changed (schemas.py and mock/*.json untouched), so this is a compatibility fix only. Cleaned up the temporary venv and wheel caches afterward.
