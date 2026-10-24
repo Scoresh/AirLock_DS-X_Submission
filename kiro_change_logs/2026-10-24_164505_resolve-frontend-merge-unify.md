@@ -1,0 +1,8 @@
+# Resolve frontend merge: unify styled shell + app.js + PDF.js heatmap
+
+**Files changed:**
+- frontend/index.html
+- frontend/app.js
+- frontend/styles.css
+
+Resolved the "accepted both changes" merge that had concatenated two different frontends into `index.html` (duplicate meta/title tags, a duplicated `#heat` section, duplicate ids, and two complete script implementations — one inline PDF.js module and one external `app.js`). Chose Option 1: kept the polished "card" shell with `styles.css`, header/hero/stepper/cards/footer, and the robust `app.js` structure (escaping, error banner, loading spinners, stepper state), and ported the inline PDF.js canvas heatmap into `app.js` so pages render locally with one overlay hot spot per finding bbox and linked highlight between a region and its finding. Rewrote `index.html` as a single clean document with the product name "Stranger Mode" (per README/backend) and one `<script type="module" src="app.js">`; the heatmap card now holds the `canvasWrap`/`pageCanvas` plus the tile grid and detail panel. Added canvas/hotspot and finding severity/active styles to `styles.css` using the existing design tokens. Verified there are no remaining duplicate ids, no conflict markers, a single script tag and title, and that all 15 `getElementById` targets in `app.js` exist in `index.html`. The backend API contract is unchanged (reads `s.from`, `gate_open`, finding `bbox`/`severity`/`source`), so this is UI-only and interoperable; the JS syntax check with node was skipped because node is not installed. The old `frontend/index.skeleton.html` was left in place (non-destructive) and can be deleted if unwanted.
