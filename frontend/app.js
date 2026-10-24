@@ -128,6 +128,7 @@ function showIntakeError(message) {
 }
 
 function chooseFile(file) {
+  if (state.setupBlocked) return;  // keep the setup warning visible
   $("intake-error").hidden = true;
   if (!file) return;
   const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
@@ -926,7 +927,18 @@ async function runReview() {
 /* ---------- start ---------- */
 (async () => {
   try {
-    state.model = (await request("/status")).model;
+    const status = await request("/status");
+    state.model = status.model;
+    // A missing model or data file must stop the check, not silently find nothing.
+    if (status.setup && !status.setup.ready) {
+      setLocalStatus("Setup incomplete · checks can't run");
+      $("intake-error").innerHTML = `<strong>Local checks can't run on this machine yet.</strong>
+        <ul style="margin:6px 0 0 18px;list-style:disc">${status.setup.issues.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
+        <div class="notice__actions">Restart the server after fixing this, then reload the page.</div>`;
+      $("intake-error").hidden = false;
+      $("open-sample").disabled = true;
+      state.setupBlocked = true;
+    }
   } catch {
     state.model = null;
   }
