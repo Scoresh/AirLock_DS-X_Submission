@@ -140,6 +140,7 @@ $("accept").onclick = async () => {
     const accepted = scored.participants.flatMap((p) =>
       p.suggestions.map((s) => ({ participant_id: p.id, field: s.field })));
     await rescore(accepted);
+    await showLlmView();  // accepted fixes rewrite the text the LLM will get
   } catch (err) {
     showError(err.message);
   } finally {
