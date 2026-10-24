@@ -14,6 +14,7 @@ Quasi-identifiers and how each can be made vaguer (OMIT = drop the detail):
     begincol        transferred in         -> OMIT
     Class           first-year / senior    (kept: already coarse)
 """
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -24,7 +25,8 @@ from .schemas import AcceptedFix, Risk, ScoredParticipant, ScoreResult, Scrubbed
 HIGH_MAX_K = 4     # 1-4 blocks sending
 MEDIUM_MAX_K = 19  # 5-19 warns
 
-DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "NSSE-synthetic.csv"
+# NSSE_DATA_FILE lets a host (e.g. a Render secret file) supply the data outside the repo.
+DATA_FILE = Path(os.getenv("NSSE_DATA_FILE") or Path(__file__).resolve().parents[2] / "data" / "NSSE-synthetic.csv")
 
 OMIT = ""
 LADDER = {
