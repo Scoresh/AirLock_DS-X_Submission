@@ -41,6 +41,13 @@ STRUCTURE_WORDS = {
     "results", "discussion", "procedure", "objective", "objectives", "rubric", "criteria", "points",
     "lab", "prelab", "report", "assignment", "question", "problem", "exercise",
 }
+# Words after which a detected name has ended ("Elena Marchetti Second Reader").
+ROLE_WORDS = {"reader", "readers", "committee", "member", "advisor", "adviser", "chair", "supervisor",
+              "instructor", "professor", "student", "approved", "first", "second", "third"}
+# Phrases with these words are places or organisations, not people ("Mugar Memorial Library").
+ORG_WORDS = {"library", "hall", "university", "college", "school", "department", "institute", "center",
+             "centre", "building", "laboratory", "museum", "foundation", "program", "office", "board"}
+MULTISPACE = re.compile(r"[ \t]{2,}")  # justified PDF text puts several spaces between words
 LOWERCASE_WORD = re.compile(r"\b[a-zß-öø-ÿ][a-zß-öø-ÿ'’-]{2,}\b")
 # "Lab Section 4A" or "Section: 04" on one line; not "see section 2" or a heading followed by "0.2".
 SECTION = re.compile(r"\b(?:(?:lab|lecture|discussion|recitation) section[ \t]*[:#]?|section[ \t]*[:#])[ \t]*"
@@ -111,10 +118,19 @@ def setup_status() -> dict:
     return {"ready": not issues, "issues": issues}
 
 
+def _trim_name(name: str) -> str:
+    """Cut a detected name at the first heading or role word; '' if it is not a name at all."""
+    words = name.split(" ")
+    if any(w.lower() in ORG_WORDS for w in words):
+        return ""
+    for i, w in enumerate(words):
+        if w.lower().rstrip(".:,") in STRUCTURE_WORDS | ROLE_WORDS:
+            return " ".join(words[:i])  # "" for "Appendix B. Interview Logistics"
+    return name
+
+
 def _looks_like_name(name: str, lowercase_words: set[str]) -> bool:
     words = [w for w in name.split(" ") if not re.fullmatch(rf"[A-Z]\.|{_PARTICLE}", w)]
-    if any(w.lower().rstrip(".") in STRUCTURE_WORDS for w in name.split(" ")):
-        return False  # "Appendix B. Interview Logistics"
     # Equipment and headings ("Digital Multimeter") also appear lowercase in the body; real names don't.
     return not all(w.lower() in lowercase_words for w in words if len(w) > 2)
 
@@ -130,6 +146,10 @@ def _person_spans(text: str, lowercase_words: set[str]) -> list[tuple[int, int]]
             continue
         if not NAME_SHAPE.fullmatch(text[start:end]) or text[start:end].lower() in _not_names():
             continue  # drops spaCy noise like "Appendix B. Scheduling" or an affiliation like "Indri"
+        trimmed = _trim_name(text[start:end]).rstrip(" .")
+        if not trimmed:
+            continue
+        end = start + len(trimmed)
         if PARTICIPANT.fullmatch(text[start:end]) or not _looks_like_name(text[start:end], lowercase_words):
             continue
         # spaCy sometimes drops a first name: "Yago Martínez de Fuenmayor" -> "Martínez de Fuenmayor".
@@ -247,9 +267,23 @@ def scrub(parsed: ParseResult) -> ScrubResult:
     lowercase_words = set(LOWERCASE_WORD.findall(" ".join(p.text for p in parsed.pages)))
     for page in parsed.pages:
         # PDF text breaks lines mid-sentence; join them so rules and rewrites see whole phrases.
-        text, found = _tokenize_page(LINE_BREAK.sub(" ", page.text), tok, lowercase_words)
+        text = MULTISPACE.sub(" ", LINE_BREAK.sub(" ", page.text))
+        text, found = _tokenize_page(text, tok, lowercase_words)
         pages.append(ScrubbedPage(page=page.page, text=text))
         identifiers += [DirectIdentifier(token=t, type=kind, page=page.page) for t, kind in found]
+
+    # Second pass: a name found anywhere is replaced everywhere, including all-caps title pages
+    # ("JORDAN WHITFIELD") and places where the model missed it.
+    names = sorted(((v, t) for t, v in tok.key.items() if t.startswith("[PERSON_") and " " in v),
+                   key=lambda vt: len(vt[0]), reverse=True)
+    for i, page in enumerate(pages):
+        text = page.text
+        for value, token in names:
+            pattern = re.compile(r"\b" + r"\s+".join(map(re.escape, value.split())) + r"\b", re.I)
+            text, n = pattern.subn(token, text)
+            if n:
+                identifiers.append(DirectIdentifier(token=token, type="PERSON", page=page.page))
+        pages[i] = ScrubbedPage(page=page.page, text=text)
 
     KEYS_DIR.mkdir(exist_ok=True)
     (KEYS_DIR / f"{parsed.doc_id}.json").write_text(json.dumps(tok.key, indent=2))

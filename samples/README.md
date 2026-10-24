@@ -1,3 +1,19 @@
+# Demo thesis (demo day)
+
+`demo-thesis.pdf` is a 12-page fictional sociology thesis, "Night Shift". It is what **Open sample document** loads.
+Rebuild it with `cd backend && python scripts/make_demo_thesis.py`.
+
+| Where | Planted | Expected |
+|---|---|---|
+| p.1 title, p.2 acknowledgments, p.12 appendix | Author (in capitals on the title page), advisor, two committee members, an assistant; two emails, a phone number, a BU ID; "Discussion Section 04" (p.5) | All replaced with tokens; names in References and "Mugar Memorial Library" are left alone |
+| p.6 Participants | Six participants from real rows of the organizers' data | P3, P4, P7, P9 high (k = 1); P2 medium (k = 9); P5 low (k = 331). One "Apply all" opens the gate with P3 still medium (k = 7) |
+| after p.1 | No abstract page | Format finding |
+| p.7 | Left margin 0.75 in | Format finding with a highlighted strip |
+| p.8 | Page number top-right | Format finding |
+| p.12 | Helvetica 11 instead of Times 12 | Format finding |
+
+Demo line for P4: they identify with the largest group (Ring-tailed lemur), yet their double major alone makes them unique.
+
 # Test thesis
 
 `test-thesis.pdf` is a 4-page test document. Rebuild it (and `mock/parse.json`) with:

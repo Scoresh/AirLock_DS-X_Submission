@@ -168,7 +168,7 @@ $("open-sample").addEventListener("click", async () => {
     const res = await fetch("/sample");
     if (!res.ok) throw new Error("The sample document isn't available on the local server.");
     const blob = await res.blob();
-    const file = new File([blob], "test-thesis.pdf", { type: "application/pdf" });
+    const file = new File([blob], "demo-thesis.pdf", { type: "application/pdf" });
     state.isSample = true;
     await startCheck(file, true);
   } catch (err) {
