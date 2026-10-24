@@ -3,193 +3,120 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ThesisGuard — Privacy-first thesis review</title>
-  <meta name="description" content="ThesisGuard helps Boston University students prepare thesis and dissertation documents: scrub identifiers locally, check re-identification risk, and review against formatting rules.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap">
+  <title>ThesisGuard — Privacy-first document review</title>
+  <meta name="description" content="ThesisGuard checks a document for identifiers and re-identification risk on this machine, then lets you send only the prepared text for review.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="site-header">
-    <div class="container site-header__inner">
-      <a class="brand" href="/" aria-label="ThesisGuard home">
-        <span class="brand__mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2 4 5v6c0 5 3.4 8.3 8 11 4.6-2.7 8-6 8-11V5l-8-3Z"/>
-            <path d="M9 12l2 2 4-4"/>
-          </svg>
-        </span>
-        <span class="brand__text">Thesis<strong>Guard</strong></span>
-      </a>
-      <nav class="site-nav" aria-label="Primary">
-        <a href="#workflow">Workflow</a>
-        <a href="#upload">Review a document</a>
-        <span class="site-nav__badge">Boston University</span>
-      </nav>
+  <header class="masthead">
+    <div class="masthead__brand">
+      <span class="wordmark">ThesisGuard</span>
+      <span class="masthead__desc">Local privacy checks before model review</span>
     </div>
+    <dl class="masthead__status" aria-live="polite">
+      <div class="status-line">
+        <dt>Local</dt>
+        <dd id="status-local">Waiting for a document</dd>
+      </div>
+      <div class="status-line">
+        <dt>Model</dt>
+        <dd id="status-model">Checking configuration</dd>
+      </div>
+    </dl>
   </header>
 
   <main id="main">
-    <!-- Hero -->
-    <section class="hero">
-      <div class="container hero__inner">
-        <div class="hero__copy">
-          <p class="eyebrow">Privacy-first thesis preparation</p>
-          <h1>Protect participant privacy before your thesis leaves your laptop.</h1>
-          <p class="hero__lede">
-            ThesisGuard scrubs identifiers locally, measures re-identification risk, and
-            checks your dissertation against Boston University formatting rules —
-            so only safe, de-identified text is ever sent for review.
-          </p>
-          <div class="hero__actions">
-            <a class="btn btn--primary" href="#upload">Review a document</a>
-            <a class="btn btn--ghost" href="#workflow">How it works</a>
-          </div>
-          <ul class="hero__assurances">
-            <li><span class="dot dot--safe" aria-hidden="true"></span> Scrubbing runs locally</li>
-            <li><span class="dot dot--accent" aria-hidden="true"></span> Privacy gate before review</li>
-            <li><span class="dot dot--neutral" aria-hidden="true"></span> Full LLM transparency</li>
-          </ul>
-        </div>
-        <aside class="hero__panel" aria-hidden="true">
-          <div class="mini-card">
-            <div class="mini-card__row">
-              <span class="badge badge--high">High risk</span>
-              <span class="mini-card__k">k ≈ 1</span>
-            </div>
-            <p class="mini-card__text">22-year-old astronomy major from Iceland…</p>
-            <div class="mini-card__arrow">→ generalize country to “Europe” (k ≈ 3)</div>
-          </div>
-          <div class="mini-card mini-card--safe">
-            <div class="mini-card__row">
-              <span class="badge badge--low">Gate open</span>
-              <span class="mini-card__k">safe to review</span>
-            </div>
-            <p class="mini-card__text">Scrubbed text ready for rubric review.</p>
-          </div>
-        </aside>
-      </div>
-    </section>
+    <!-- Before upload -->
+    <section id="intake" class="intake" aria-labelledby="intake-title">
+      <h1 id="intake-title" class="intake__title">Prepare your document for review.</h1>
+      <p class="intake__lede">
+        Identifiers and re-identification risk are checked on this machine first.
+        Only the prepared text can be sent to a review model, and only after the privacy gate passes.
+      </p>
 
-    <!-- Stepper -->
-    <section id="workflow" class="container">
-      <ol class="stepper" aria-label="Workflow progress">
-        <li class="step is-active" data-step="1"><span class="step__num">1</span><span class="step__label">Upload</span></li>
-        <li class="step" data-step="2"><span class="step__num">2</span><span class="step__label">Privacy gate</span></li>
-        <li class="step" data-step="3"><span class="step__num">3</span><span class="step__label">Review &amp; heatmap</span></li>
-        <li class="step" data-step="4"><span class="step__num">4</span><span class="step__label">What the LLM saw</span></li>
+      <form id="upload-form" class="dropzone" novalidate>
+        <input type="file" id="pdf" class="visually-hidden" accept="application/pdf,.pdf">
+        <label for="pdf" class="dropzone__target" id="dropzone">
+          <span class="dropzone__title">Drop a PDF here, or <span class="dropzone__link">choose a file</span></span>
+          <span class="dropzone__hint">Parsed and checked by the local server on this machine</span>
+        </label>
+        <p id="file-name" class="dropzone__file" aria-live="polite"></p>
+        <div class="intake__actions">
+          <button type="submit" id="start" class="btn btn--primary" disabled>Start local check</button>
+          <button type="button" id="open-sample" class="btn btn--secondary">Open sample document</button>
+        </div>
+      </form>
+
+      <p id="progress" class="progress" role="status" aria-live="polite"></p>
+      <div id="intake-error" class="notice notice--error" role="alert" hidden></div>
+
+      <ol class="method" aria-label="How it works">
+        <li><span class="method__where">Local</span><span>Read the PDF and replace names, emails, phone numbers and student IDs with tokens.</span></li>
+        <li><span class="method__where">Local</span><span>Estimate how many people in a reference population match each described participant.</span></li>
+        <li><span class="method__where">Local</span><span>Apply suggested rewrites until no participant is above the high-risk threshold.</span></li>
+        <li><span class="method__where method__where--model">Model</span><span>Send the prepared text for rubric review, if a model is configured. Format rules run locally either way.</span></li>
       </ol>
     </section>
 
-    <!-- Global error banner -->
-    <div class="container">
-      <div id="error" class="alert alert--error" role="alert" hidden></div>
-    </div>
-
-    <!-- 1. Upload -->
-    <section id="upload" class="container">
-      <article class="card">
-        <header class="card__header">
-          <span class="card__step">Step 1</span>
-          <h2 class="card__title">Upload your document</h2>
-          <p class="card__subtitle">We parse and scrub the PDF on this machine. Nothing is sent anywhere yet.</p>
-        </header>
-        <div class="card__body">
-          <div class="uploader">
-            <label class="uploader__drop" for="pdf">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-              </svg>
-              <span class="uploader__title">Choose a PDF</span>
-              <span class="uploader__hint">or leave empty to run with sample data</span>
-              <input type="file" id="pdf" accept="application/pdf">
-            </label>
-            <p id="filename" class="uploader__filename" aria-live="polite"></p>
-            <button id="go" class="btn btn--primary btn--lg">
-              <span class="btn__label">Scrub locally</span>
-              <span class="spinner" aria-hidden="true"></span>
-            </button>
-          </div>
+    <!-- After upload -->
+    <section id="workspace" class="workspace" hidden aria-label="Workspace">
+      <div class="toolbar">
+        <div class="viewtabs" role="tablist" aria-label="Workspace sections">
+          <button type="button" role="tab" id="tab-document" class="viewtab" aria-selected="true" aria-controls="panel-document">Document</button>
+          <button type="button" role="tab" id="tab-privacy" class="viewtab" aria-selected="false" aria-controls="panel-privacy" tabindex="-1">Privacy check <span class="viewtab__count" id="count-privacy"></span></button>
+          <button type="button" role="tab" id="tab-review" class="viewtab" aria-selected="false" aria-controls="panel-review" tabindex="-1">Review <span class="viewtab__count" id="count-review"></span></button>
         </div>
-      </article>
-    </section>
-
-    <!-- 2. Privacy gate -->
-    <section id="gate" class="container" hidden>
-      <article class="card">
-        <header class="card__header">
-          <span class="card__step">Step 2</span>
-          <h2 class="card__title">Privacy gate</h2>
-          <p class="card__subtitle">Review re-identification risk per participant. Accept suggestions until the gate opens.</p>
-        </header>
-        <div class="card__body">
-          <div id="gate-status" class="gate-status" aria-live="polite"></div>
-          <div id="people" class="people"></div>
-          <div class="card__actions">
-            <button id="accept" class="btn btn--secondary">Accept all suggestions</button>
-            <button id="send" class="btn btn--primary" disabled>
-              <span class="btn__label">Send scrubbed text for rubric review</span>
-              <span class="spinner" aria-hidden="true"></span>
-            </button>
-          </div>
+        <div class="toolbar__actions">
+          <button type="button" id="toggle-compare" class="btn btn--quiet" aria-pressed="false">Compare original and prepared text</button>
+          <button type="button" id="new-doc" class="btn btn--quiet">New document</button>
         </div>
-      </article>
-    </section>
+      </div>
 
-    <!-- 3. Heatmap -->
-    <section id="heat" class="container" hidden>
-      <article class="card">
-        <header class="card__header">
-          <span class="card__step">Step 3</span>
-          <h2 class="card__title">Submission heatmap</h2>
-          <p class="card__subtitle">Each tile is a page. Click one to see privacy and rubric findings.</p>
-        </header>
-        <div class="card__body">
-          <div class="legend" aria-hidden="true">
-            <span class="legend__item"><span class="swatch swatch--risk"></span> Privacy risk</span>
-            <span class="legend__item"><span class="swatch swatch--rubric"></span> Rubric finding</span>
-            <span class="legend__item"><span class="swatch swatch--both"></span> Both</span>
-          </div>
-          <div class="heat-layout">
-            <div class="grid" id="tiles"></div>
-            <div id="detail" class="detail">
-              <p class="detail__empty">Select a page tile to inspect its findings.</p>
-            </div>
-          </div>
-          <!-- The page is drawn in the browser with PDF.js; the file never leaves the machine. -->
-          <div class="page-view" id="pageView" hidden>
-            <div class="canvas-wrap" id="canvasWrap"><canvas id="pageCanvas"></canvas></div>
-          </div>
-        </div>
-      </article>
-    </section>
+      <div class="paneswitch" role="group" aria-label="Show">
+        <button type="button" id="show-reader" class="paneswitch__btn" aria-pressed="true">Document</button>
+        <button type="button" id="show-inspector" class="paneswitch__btn" aria-pressed="false">Findings</button>
+      </div>
 
-    <!-- 4. LLM view -->
-    <section id="llmview" class="container" hidden>
-      <article class="card">
-        <header class="card__header">
-          <span class="card__step">Step 4</span>
-          <h2 class="card__title">What the LLM saw</h2>
-          <p class="card__subtitle">The original stays local. Only the scrubbed column is ever sent for review.</p>
-        </header>
-        <div class="card__body">
-          <div id="pages" class="pages"></div>
-        </div>
-      </article>
+      <div class="workspace__grid">
+        <aside class="sidebar" aria-label="Document navigation">
+          <section class="sidebar__block">
+            <h2 class="label">File</h2>
+            <p class="file-title" id="file-title"></p>
+            <p class="file-meta" id="file-meta"></p>
+          </section>
+          <section class="sidebar__block">
+            <h2 class="label">Privacy gate</h2>
+            <p class="gate-chip" id="gate-chip"></p>
+          </section>
+          <section class="sidebar__block sidebar__block--pages">
+            <h2 class="label" id="pages-label">Pages</h2>
+            <ol class="pagelist" id="page-list" aria-labelledby="pages-label"></ol>
+            <p class="legend" aria-hidden="true">
+              <span><b class="mk mk--privacy">P</b> Privacy</span>
+              <span><b class="mk mk--format">F</b> Format rule</span>
+              <span><b class="mk mk--model">M</b> Model</span>
+            </p>
+          </section>
+        </aside>
+
+        <section class="reader" id="reader" aria-label="Document">
+          <p class="reader__note" id="reader-note" hidden></p>
+          <div id="doc-view" class="doc-view"></div>
+          <div id="compare-view" class="compare-view" hidden></div>
+        </section>
+
+        <aside class="inspector" id="inspector" aria-label="Findings">
+          <p class="inspector__busy" id="busy" role="status" aria-live="polite"></p>
+          <div id="work-error" class="notice notice--error" role="alert" hidden></div>
+          <div id="panel-document" role="tabpanel" aria-labelledby="tab-document" class="panel"></div>
+          <div id="panel-privacy" role="tabpanel" aria-labelledby="tab-privacy" class="panel" hidden></div>
+          <div id="panel-review" role="tabpanel" aria-labelledby="tab-review" class="panel" hidden></div>
+        </aside>
+      </div>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <div class="container site-footer__inner">
-      <span class="brand brand--sm">
-        <span class="brand__text">Thesis<strong>Guard</strong></span>
-      </span>
-      <p>Prepared for the DS+X 2026 Hackathon. Participant data stays on your machine.</p>
-    </div>
-  </footer>
 
   <script src="app.js"></script>
 </body>
