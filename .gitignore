@@ -1,0 +1,10 @@
+# token keys map tokens back to real names: never commit
+keys/*
+!keys/.gitkeep
+# NSSE data stays local
+data/*
+!data/README.md
+.venv/
+__pycache__/
+.DS_Store
+.env
