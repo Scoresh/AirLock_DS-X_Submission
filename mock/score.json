@@ -1,0 +1,17 @@
+{
+  "doc_id": "demo",
+  "participants": [
+    {
+      "id": "PARTICIPANT_03",
+      "k": 1,
+      "risk": "high",
+      "attributes": {"IRage": 22, "country22": "Iceland", "MAJfirstcode": "Astronomy", "living18": "Campus housing", "athlete": 1},
+      "suggestions": [
+        {"field": "country22", "from": "Iceland", "to": "Europe", "new_field": "countrycol22", "new_k": 3},
+        {"field": "MAJfirstcode", "from": "Astronomy", "to": "Physical Sciences, Mathematics, and Computer Science", "new_field": "MAJfirstcol", "new_k": 6},
+        {"field": "IRage", "from": "22", "to": "20-23", "new_field": "IRagecol", "new_k": 2}
+      ]
+    }
+  ],
+  "gate_open": false
+}
