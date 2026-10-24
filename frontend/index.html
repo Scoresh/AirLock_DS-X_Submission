@@ -57,11 +57,13 @@ $("go").onclick = async () => {
   docId = parsed.doc_id;
   scrubbed = await api(`/scrub/${docId}`);
   await rescore([]);
-  showLlmView();
 };
 
 async function rescore(accepted) {
+  $("accept").disabled = true;  // a second click before the reply would resend the old suggestions
   scored = await api("/score", { doc_id: docId, accepted });
+  $("accept").disabled = false;
+  await showLlmView();  // accepted fixes rewrite the text the LLM will get
   $("gate").hidden = false;
   $("people").innerHTML = scored.participants.map((p) => `
     <p><b>${p.id}</b>: <span class="${p.risk}">${p.risk} risk (k ≈ ${p.k})</span><br>
