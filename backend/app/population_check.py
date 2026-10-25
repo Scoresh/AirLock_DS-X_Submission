@@ -73,15 +73,18 @@ def verify_manifest(public: dict) -> None:
 
 
 def availability() -> dict:
-    """Expose availability, never service credentials, to the source selector."""
+    """Distinguish missing configuration from a busy/unreachable bridge."""
     try:
         public = manifest()
         if len(os.getenv("JIFF_BRIDGE_TOKEN", "")) < 32:
             raise PopulationError("Missing bridge configuration")
+    except PopulationError:
+        return {"available": False, "configured": False, "message": "JIFF is not enabled on this deployment. Use the local synthetic reference, or ask the service owner to start the JIFF demo services."}
+    try:
         live = call("/manifest", timeout=3)
         if live.get("fingerprint") != digest(public):
             raise PopulationError("Manifest mismatch")
-        return {"available": True, "population_id": public["population_id"],
+        return {"available": True, "configured": True, "population_id": public["population_id"],
                 "population_version": str(public["version"])}
     except PopulationError:
-        return {"available": False, "message": "JIFF is not enabled or ready on this deployment. Use the local synthetic reference, or ask the service owner to start the JIFF demo services."}
+        return {"available": False, "configured": True, "message": "JIFF is configured but temporarily unavailable. A count may be running. Wait briefly and choose Check availability again; review stays blocked until a fresh count succeeds."}
