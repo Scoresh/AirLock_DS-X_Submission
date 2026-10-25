@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>StrangerThesis — Privacy-first document review</title>
-  <meta name="description" content="StrangerThesis checks a document for identifiers and re-identification risk on this machine, then lets you send only the prepared text for review.">
+  <meta name="description" content="Find personal details, make participant descriptions less identifying, and prepare your document for review with StrangerThesis.">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,41 +17,46 @@
     </div>
     <dl class="masthead__status" aria-live="polite">
       <div class="status-line">
-        <dt>Local:</dt>
+        <dt>Status:</dt>
         <dd id="status-local">Waiting for a document</dd>
       </div>
       <div class="status-line">
-        <dt>Model:</dt>
-        <dd id="status-model">Checking configuration</dd>
+        <dt>AI review:</dt>
+        <dd id="status-model">Getting ready</dd>
       </div>
     </dl>
     <button type="button" id="open-settings" class="btn btn--quiet btn--small masthead__settings" aria-haspopup="dialog">Settings</button>
   </header>
 
   <main id="main">
-    <p id="deployment-notice" class="deployment-notice" role="note" hidden></p>
+    <aside id="deployment-notice" class="deployment-notice" aria-label="About this demo" hidden>
+      <p><strong>Trying the demo?</strong> Use the sample or a public document. Uploaded files are processed on this website’s server.</p>
+      <details><summary>About the demo data</summary>
+        <p>Privacy estimates use fictional data. The private comparison (JIFF) runs both sides on this server to show how it works; it is not connected to a university’s student records.</p>
+      </details>
+    </aside>
     <!-- Before upload -->
     <section id="intake" class="intake" aria-labelledby="intake-title">
       <h1 id="intake-title" class="intake__title">Prepare your document for review.</h1>
       <p class="intake__lede">
-        Identifiers are checked locally first; population counts use the selected source.
-        Only the prepared text can be sent to a review model, and only after the privacy gate passes.
+        Find personal details and make participant descriptions less identifying.
+        You can send the prepared text for AI feedback once the privacy check passes.
       </p>
 
       <div class="population-source">
-        <label for="population-source">Population source</label>
-        <select id="population-source">
-          <option value="local">Synthetic reference · local pandas</option>
-          <option value="jiff">Secure population check · JIFF prototype</option>
+        <label for="population-source">How would you like to check privacy?</label>
+        <select id="population-source" aria-describedby="population-note">
+          <option value="local">Standard comparison</option>
+          <option value="jiff">Private comparison (JIFF demo)</option>
         </select>
-        <p id="population-note">Checking source availability…</p>
-        <button id="population-retry" type="button" class="btn btn--secondary btn--small" hidden>Check availability again</button>
+        <p id="population-note" aria-live="polite">Getting ready…</p>
+        <button id="population-retry" type="button" class="btn btn--secondary btn--small" hidden>Try again</button>
       </div>
       <form id="upload-form" class="dropzone" novalidate>
         <input type="file" id="pdf" class="visually-hidden" accept="application/pdf,.pdf">
         <label for="pdf" class="dropzone__target" id="dropzone">
           <span class="dropzone__title">Drop a PDF here, or <span class="dropzone__link">choose a file</span></span>
-          <span class="dropzone__hint">Parsed and checked by the local server on this machine</span>
+          <span class="dropzone__hint" id="upload-hint">We’ll check personal details before any AI review.</span>
         </label>
         <p id="file-name" class="dropzone__file" aria-live="polite"></p>
         <div class="intake__actions">
@@ -64,19 +69,19 @@
       <div id="intake-error" class="notice notice--error" role="alert" hidden></div>
 
       <ol class="method" aria-label="How it works">
-        <li><span class="method__where">Local</span><span>Read the PDF and replace names, emails, phone numbers, student IDs and course sections with tokens.</span></li>
-        <li><span class="method__where">Population</span><span>Estimate how many people in a reference population match each described participant.</span></li>
-        <li><span class="method__where">Local</span><span>Apply suggested rewrites until no participant is above the high-risk threshold.</span></li>
-        <li><span class="method__where method__where--model">Model</span><span>Send the prepared text for rubric review, if a model is configured. Format rules run locally either way.</span></li>
+        <li><span class="method__where">Find</span><span>Replace names, contact details and student IDs with placeholders.</span></li>
+        <li><span class="method__where">Check</span><span>Estimate how many people share each participant’s details, using the selected comparison data.</span></li>
+        <li><span class="method__where">Edit</span><span>Use suggested rewrites to make distinctive descriptions less identifying.</span></li>
+        <li><span class="method__where method__where--model">Review</span><span>Check formatting automatically. Add an AI reviewer in Settings for feedback against your rubric.</span></li>
       </ol>
 
       <section class="csvmode" aria-labelledby="csv-title">
         <h2 id="csv-title" class="csvmode__title">Working with a data table instead?</h2>
-        <p class="csvmode__lede">Upload a CSV. Identifier columns become tokens, identifying columns are generalized,
-          and you get the re-identification risk before and after. Everything runs on this machine.</p>
+        <p class="csvmode__lede">Upload a CSV to replace personal details with placeholders, make distinctive details broader,
+          and compare the estimated privacy risk before and after.</p>
         <form id="csv-form" class="csvmode__form" novalidate>
           <input type="file" id="csv-file" accept=".csv,text/csv">
-          <button type="submit" id="csv-start" class="btn btn--secondary" disabled>Scrub table</button>
+          <button type="submit" id="csv-start" class="btn btn--secondary" disabled>Check table privacy</button>
         </form>
         <p id="csv-progress" class="progress" role="status" aria-live="polite"></p>
         <div id="csv-error" class="notice notice--error" role="alert" hidden></div>
