@@ -14,12 +14,15 @@ function createBridge({manifest, token, coordToken, relay}) {
     if (req.method !== 'POST' || req.url !== '/batch') return reply(res, 404, {});
     if (busy) return reply(res, 409, {error:'Another MPC batch is running'});
     busy = true;
+    const started = Date.now();
+    let comparisons = 0;
     try {
       const payload = await body(req);
       if (payload.fingerprint !== fp || !/^[a-f0-9]{64}$/.test(payload.binding) ||
           !Array.isArray(payload.profiles) || !payload.profiles.length || payload.profiles.length > 32)
         return reply(res, 400, {error:'Invalid batch or stale manifest'});
       payload.profiles.forEach(p => protocol.validateInput(1, p, manifest.schema, manifest.row_count));
+      comparisons = payload.profiles.length;
       const id = crypto.randomUUID();
       await call(relay + '/jobs', coordToken, 'POST', {id, fingerprint:fp, queries:payload.profiles.length});
       // One batch request; serial sessions keep independent processes synchronized.
@@ -28,7 +31,10 @@ function createBridge({manifest, token, coordToken, relay}) {
         counts.push(await count(relay, id + '-' + i, 1, payload.profiles[i], manifest));
       }
       return reply(res, 200, {binding:payload.binding, fingerprint:fp, counts, population_id:manifest.population_id, version:manifest.version});
-    } catch (_) {
+    } catch (error) {
+      // Log operational metadata only: no profiles, counts, tokens or bindings.
+      const code = ['MPC_TIMEOUT', 'MPC_CONNECTION', 'MPC_COMPUTATION'].includes(error.code) ? error.code : 'PEER_OR_INPUT';
+      console.error(`JIFF batch failed: code=${code} comparisons=${comparisons} elapsed_ms=${Date.now()-started}`);
       return reply(res, 503, {error:'Secure population check failed; no local fallback was used'});
     } finally { busy = false; }
   });

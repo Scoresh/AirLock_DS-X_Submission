@@ -216,8 +216,7 @@ async function startCheck(file, isSample = false) {
     setLocalStatus("Finding personal details");
     state.scrubbed = await request(`/scrub/${parsed.doc_id}?source=${state.populationSource}`, { method: "POST" });
 
-    setIntakeBusy(true, state.populationSource === "jiff" ? "Comparing details privately · this can take a moment" : "Checking participant descriptions");
-    state.scored = await request("/score", { method: "POST", body: { doc_id: parsed.doc_id, accepted: [] } });
+    state.scored = await scoreDocument(parsed.doc_id, [], text => setIntakeBusy(true, text));
 
     setIntakeBusy(true, "Preparing comparison");
     state.view = await request(`/llm-view/${parsed.doc_id}`);
@@ -232,8 +231,27 @@ async function startCheck(file, isSample = false) {
     setLocalStatus("Waiting for a document");
     const hint = err.status === 400
       ? " Choose another PDF, or open the sample document."
-      : err.status === 0 ? "" : " Try again, or open the sample document.";
-    showIntakeError(`Couldn't check this document: ${err.message}.${hint}`);
+      : "";
+    showIntakeError(`Couldn’t finish the privacy check: ${err.message.replace(/[.\s]+$/, "")}.${hint}`);
+  }
+}
+
+async function scoreDocument(docId, accepted, progress) {
+  const started = Date.now();
+  const secure = state.populationSource === "jiff";
+  function update() {
+    const seconds = Math.floor((Date.now() - started) / 1000);
+    const elapsed = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    progress(secure
+      ? `Comparing details privately · ${elapsed}. Larger checks may take a few minutes.`
+      : "Checking participant descriptions");
+  }
+  update();
+  const timer = secure ? setInterval(update, 5000) : null;
+  try {
+    return await request("/score", { method: "POST", body: { doc_id: docId, accepted } });
+  } finally {
+    if (timer !== null) clearInterval(timer);
   }
 }
 
@@ -900,9 +918,8 @@ async function applyFixes(fixes) {
   state.review = null;
   state.rubricCheck = null;
   renderAll();
-  setBusy(state.scored?.population_source === "jiff" ? "Comparing details privately · this can take a moment" : "Checking participant descriptions");
   try {
-    state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: fixes } });
+    state.scored = await scoreDocument(state.parsed.doc_id, fixes, setBusy);
     setBusy("Preparing comparison");
     state.view = await request(`/llm-view/${state.parsed.doc_id}`);
     setBusy("");

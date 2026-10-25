@@ -4,7 +4,7 @@ function count(relay, session, party, input, manifest) {
   protocol.validateInput(party, input, manifest.schema, manifest.row_count);
   return new Promise((resolve, reject) => {
     let client;
-    const timer = setTimeout(() => finish(Error('MPC timed out; registrar may be offline')), 55000);
+    const timer = setTimeout(() => finish(Object.assign(Error('MPC timed out'), {code:'MPC_TIMEOUT'})), 55000);
     let done = false;
     function finish(error, value) {
       if (done) return;
@@ -15,10 +15,10 @@ function count(relay, session, party, input, manifest) {
     }
     client = new JIFFClient(relay, session, {
       party_id:party, party_count:2, Zp:protocol.PRIME, crypto_provider:true,
-      onError:() => finish(Error('MPC connection failed')),
+      onError:() => finish(Object.assign(Error('MPC connection failed'), {code:'MPC_CONNECTION'})),
       onConnect:c => c.wait_for([1, 2], async () => {
         try { finish(null, await protocol.compute(c, input, manifest.schema, manifest.row_count)); }
-        catch (_) { finish(Error('MPC computation failed')); }
+        catch (_) { finish(Object.assign(Error('MPC computation failed'), {code:'MPC_COMPUTATION'})); }
       })
     });
   });
