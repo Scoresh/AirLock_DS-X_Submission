@@ -40,3 +40,20 @@ def test_mismatched_bridge_manifest_does_not_advertise_ready(monkeypatch):
     monkeypatch.setenv('JIFF_BRIDGE_TOKEN','x'*40)
     monkeypatch.setattr(population_check,'call',lambda *args,**kwargs:{'fingerprint':'wrong'})
     assert not population_check.availability()['available']
+
+
+def test_busy_bridge_remains_configured_and_can_be_retried(monkeypatch):
+    path = Path(__file__).resolve().parents[1]/'jiff/fixtures/public-manifest.json'
+    monkeypatch.setenv('JIFF_MANIFEST',str(path))
+    monkeypatch.setenv('JIFF_BRIDGE_TOKEN','x'*40)
+    def busy(*args,**kwargs):
+        raise population_check.PopulationError('temporary timeout')
+    monkeypatch.setattr(population_check,'call',busy)
+    state = population_check.availability()
+    assert state['configured'] is True
+    assert state['available'] is False
+    assert 'temporarily unavailable' in state['message']
+    assert 'not enabled' not in state['message']
+    public = json.loads(path.read_text())
+    monkeypatch.setattr(population_check,'call',lambda *args,**kwargs:{'fingerprint':population_check.digest(public)})
+    assert population_check.availability()['available'] is True

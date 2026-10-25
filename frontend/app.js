@@ -1555,18 +1555,24 @@ async function refreshPopulationSetup() {
   $("start").disabled = true;
   $("open-sample").disabled = true;
   $("population-source").disabled = true;
+  $("population-source").setAttribute("aria-busy", "true");
+  $("population-retry").disabled = true;
+  $("population-retry").hidden = true;
   $("population-note").textContent = state.populationSource === "jiff"
     ? "Experimental Registrar count. Configure the local bridge and public codebook first; both parties must be online. A failed check never falls back to pandas. Source is fixed for this document."
     : "Count matches against the configured local synthetic reference. Source is fixed for this document.";
   try {
+    setLocalStatus("Checking source availability");
     const status = await request(`/status?source=${state.populationSource}`);
     state.model = status.model;
     const jiff = status.population_sources?.jiff;
     const jiffOption = $("population-source").querySelector('option[value="jiff"]');
     if (jiff) {
-      jiffOption.disabled = !jiff.available && state.populationSource !== "jiff";
-      jiffOption.textContent = jiff.available ? "Secure population check · JIFF prototype" : "Secure population check · not enabled";
-      if (!jiff.available && state.populationSource === "local") $("population-note").textContent += " JIFF is not enabled or ready on this deployment.";
+      jiffOption.disabled = jiff.configured === false && state.populationSource !== "jiff";
+      jiffOption.textContent = jiff.available ? "Secure population check · JIFF prototype"
+        : jiff.configured ? "Secure population check · temporarily unavailable" : "Secure population check · not enabled";
+      if (!jiff.available) $("population-note").textContent += " " + jiff.message;
+      $("population-retry").hidden = jiff.available;
     }
     const hosted = status.deployment_mode === "hosted-demo";
     $("deployment-notice").hidden = !hosted;
@@ -1583,10 +1589,14 @@ async function refreshPopulationSetup() {
     showIntakeError(err.message);
   } finally {
     $("population-source").disabled = false;
+    $("population-source").setAttribute("aria-busy", "false");
+    $("population-retry").disabled = false;
+    if (state.setupBlocked) $("population-retry").hidden = false;
     $("open-sample").disabled = state.setupBlocked;
     $("start").disabled = state.setupBlocked || !state.file;
     renderModelStatus();
   }
 }
 $("population-source").addEventListener("change", refreshPopulationSetup);
+$("population-retry").addEventListener("click", refreshPopulationSetup);
 refreshPopulationSetup();
