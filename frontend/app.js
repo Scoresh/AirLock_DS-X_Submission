@@ -37,6 +37,7 @@ const RISK_TEXT = { high: "High risk", medium: "Medium risk", low: "Low risk" };
 const RISK_ORDER = { high: 0, medium: 1, low: 2 };
 
 const state = {
+  populationSource: "local",
   model: null,          // { configured, model, endpoint }
   file: null, isSample: false,
   parsed: null, scrubbed: null, scored: null, view: null, review: null,
@@ -66,6 +67,11 @@ async function request(path, { method = "GET", body, form } = {}) {
   if (!res.ok) {
     let detail = res.statusText;
     try { detail = (await res.json()).detail || detail; } catch { /* not JSON */ }
+    if (state.scored && (path === "/score" || ((path === "/review" || path.startsWith("/rubric-check/")) && [403, 404, 503].includes(res.status)))) {
+      state.scored = { ...state.scored, gate_open: false, check_error: detail };
+      state.review = null;
+      state.rubricCheck = null;
+    }
     throw Object.assign(new Error(detail), { status: res.status });
   }
   return res.json();
@@ -173,7 +179,7 @@ $("open-sample").addEventListener("click", async () => {
   $("intake-error").hidden = true;
   setIntakeBusy(true, "Loading sample document");
   try {
-    const res = await fetch("/sample");
+    const res = await fetch(`/sample?source=${state.populationSource}`);
     if (!res.ok) throw new Error("The sample document isn't available on the local server.");
     const blob = await res.blob();
     const file = new File([blob], "demo-thesis.pdf", { type: "application/pdf" });
@@ -189,6 +195,7 @@ function setIntakeBusy(busy, step = "") {
   $("progress").textContent = busy ? step : "";
   $("start").disabled = busy || !state.file;
   $("open-sample").disabled = busy;
+  $("population-source").disabled = busy;
   if (busy) setLocalStatus(step);
 }
 
@@ -206,9 +213,9 @@ async function startCheck(file, isSample = false) {
 
     setIntakeBusy(true, "Checking identifiers");
     setLocalStatus("Checking identifiers");
-    state.scrubbed = await request(`/scrub/${parsed.doc_id}`, { method: "POST" });
+    state.scrubbed = await request(`/scrub/${parsed.doc_id}?source=${state.populationSource}`, { method: "POST" });
 
-    setIntakeBusy(true, "Estimating risk");
+    setIntakeBusy(true, state.populationSource === "jiff" ? "Secure count · waiting for Registrar" : "Estimating risk");
     state.scored = await request("/score", { method: "POST", body: { doc_id: parsed.doc_id, accepted: [] } });
 
     setIntakeBusy(true, "Preparing comparison");
@@ -304,7 +311,7 @@ async function enterWorkspace() {
   const n = state.parsed.pages.length;
   $("file-title").textContent = state.isSample ? "Sample document" : state.file.name;
   $("file-meta").textContent = `${state.file.name} · ${plural(n, "page")} · ${fileSize(state.file.size)}`;
-  setLocalStatus(`Checked on this machine · ${plural(n, "page")}`);
+  setLocalStatus(state.scored.population_source === "jiff" ? `Identifiers local · JIFF count · ${plural(n, "page")}` : `Checked on this machine · ${plural(n, "page")}`);
 
   const scored = state.scored.participants;
   const firstConcern = state.scrubbed.participants.find((p) => scoredById()[p.id]?.risk === "high");
@@ -462,7 +469,11 @@ function renderSidebar() {
   }).join("");
 
   const high = state.scored.participants.filter((p) => p.risk === "high");
-  $("gate-chip").innerHTML = state.scored.gate_open
+  $("gate-chip").innerHTML = state.scored.checking
+    ? `<span class="risk risk--high">Checking · review blocked</span>`
+    : state.scored.check_error
+    ? `<span class="risk risk--high">Incomplete · review blocked</span>`
+    : state.scored.gate_open
     ? `<span class="risk risk--ready">Ready for review</span>`
     : `<span class="risk risk--high">Blocked · ${plural(high.length, "high-risk participant")}</span>`;
 
@@ -768,6 +779,8 @@ function renderCompare() {
 /* ---------- inspector: privacy check ---------- */
 function gateHtml() {
   const s = state.scored;
+  if (s.checking) return `<div class="gate gate--blocked"><p class="gate__title">Privacy check in progress</p><p>The previous count no longer authorizes review. Waiting for the updated population check.</p></div>`;
+  if (s.check_error) return `<div class="gate gate--blocked"><p class="gate__title">Privacy check incomplete · review blocked</p><p>${esc(s.check_error)}</p><button class="btn btn--secondary" data-action="retry-population">Retry population check</button></div>`;
   const high = s.participants.filter((p) => p.risk === "high");
   const medium = s.participants.filter((p) => p.risk === "medium");
   if (!s.gate_open) {
@@ -806,7 +819,9 @@ function renderPrivacyPanel() {
 
   $("panel-privacy").innerHTML = `
     <h2 class="panel__title">Privacy check</h2>
-    <p class="panel__intro">Each described participant is compared with the organizers' NSSE synthetic data: 20,731 made-up respondents.
+    <p class="panel__intro">${state.scored.population_source === "jiff"
+      ? `Source: JIFF secure population check · ${esc(state.scored.population_id || "configured Registrar")} · version ${esc(state.scored.population_version || "unknown")}. Only secret shares cross to the Registrar. This is a small synthetic-data prototype.`
+      : "Source: configured local synthetic reference · pandas count."}
       <strong>k</strong> is the estimated number of people who fit the same description: the smaller it is, the easier that person is to single out.</p>
     <details class="explain"><summary>How to read k</summary>
       <p>k of 1–4: high risk, blocks review. k of 5–19: medium, a narrow group. k of 20 or more: low.
@@ -878,9 +893,13 @@ function focusParticipant(id) {
 }
 
 async function applyFixes(fixes) {
-  if (!fixes.length || state.busy) return;
+  if (state.busy) return;
   $("work-error").hidden = true;
-  setBusy("Estimating risk");
+  state.scored = {...state.scored, gate_open:false, checking:true, check_error:null};
+  state.review = null;
+  state.rubricCheck = null;
+  renderAll();
+  setBusy(state.scored?.population_source === "jiff" ? "Secure count · waiting for Registrar" : "Estimating risk");
   try {
     state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: fixes } });
     setBusy("Preparing comparison");
@@ -893,6 +912,10 @@ async function applyFixes(fixes) {
     maybeAutoFormatCheck();
   } catch (err) {
     setBusy("");
+    if (state.scored) {
+      state.scored = {...state.scored, gate_open:false, checking:false, check_error:err.message};
+      renderAll();
+    }
     showWorkError(err, () => applyFixes(fixes));
   }
 }
@@ -900,7 +923,9 @@ async function applyFixes(fixes) {
 $("inspector").addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t || t.disabled) return;
-  if (t.dataset.apply) {
+  if (t.dataset.action === "retry-population") {
+    applyFixes([]);
+  } else if (t.dataset.apply) {
     const [participant_id, field] = t.dataset.apply.split("|");
     state.focus = participant_id;
     applyFixes([{ participant_id, field }]);
@@ -1322,6 +1347,7 @@ async function runRubricCheck() {
       state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: [] } }).catch(() => state.scored);
       renderAll();
     }
+    if (state.scored) renderAll();
     showWorkError(err, () => runRubricCheck());
   }
 }
@@ -1342,6 +1368,7 @@ async function runReview() {
       state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: [] } }).catch(() => state.scored);
       renderAll();
     }
+    if (state.scored) renderAll();
     showWorkError(err, () => runReview());
   }
 }
@@ -1360,8 +1387,11 @@ async function maybeAutoFormatCheck() {
     });
     state.formatCheckedFor = state.parsed.doc_id;
     renderAll();
-  } catch {
-    // A failed auto-check is non-fatal; the privacy check still works. Stay quiet.
+  } catch (err) {
+    if (state.scored?.check_error) {
+      renderAll();
+      showWorkError(err, () => applyFixes([]));
+    }
   }
 }
 
@@ -1518,23 +1548,35 @@ $("settings-save").addEventListener("click", saveSettings);
 $("settings-test").addEventListener("click", testSettings);
 $("settings-clear").addEventListener("click", clearSettings);
 
-/* ---------- start ---------- */
-(async () => {
+/* ---------- source-aware setup ---------- */
+async function refreshPopulationSetup() {
+  state.populationSource = $("population-source").value;
+  state.setupBlocked = true;
+  $("start").disabled = true;
+  $("open-sample").disabled = true;
+  $("population-source").disabled = true;
+  $("population-note").textContent = state.populationSource === "jiff"
+    ? "Experimental Registrar count. Configure the local bridge and public codebook first; both parties must be online. A failed check never falls back to pandas. Source is fixed for this document."
+    : "Count matches against the configured local synthetic reference. Source is fixed for this document.";
   try {
-    const status = await request("/status");
+    const status = await request(`/status?source=${state.populationSource}`);
     state.model = status.model;
-    // A missing model or data file must stop the check, not silently find nothing.
-    if (status.setup && !status.setup.ready) {
-      setLocalStatus("Setup incomplete · checks can't run");
-      $("intake-error").innerHTML = `<strong>Local checks can't run on this machine yet.</strong>
-        <ul style="margin:6px 0 0 18px;list-style:disc">${status.setup.issues.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
-        <div class="notice__actions">Restart the server after fixing this, then reload the page.</div>`;
-      $("intake-error").hidden = false;
-      $("open-sample").disabled = true;
-      state.setupBlocked = true;
+    state.setupBlocked = !status.setup?.ready;
+    if (state.setupBlocked) {
+      showIntakeError(status.setup.issues.join(" · "));
+      setLocalStatus("Setup incomplete · check the selected population source");
+    } else {
+      $("intake-error").hidden = true;
+      setLocalStatus("Ready for a document");
     }
-  } catch {
-    state.model = null;
+  } catch (err) {
+    showIntakeError(err.message);
+  } finally {
+    $("population-source").disabled = false;
+    $("open-sample").disabled = state.setupBlocked;
+    $("start").disabled = state.setupBlocked || !state.file;
+    renderModelStatus();
   }
-  renderModelStatus();
-})();
+}
+$("population-source").addEventListener("change", refreshPopulationSetup);
+refreshPopulationSetup();

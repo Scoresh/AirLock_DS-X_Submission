@@ -4,6 +4,8 @@ Run from /backend:  uvicorn app.main:app --reload
 Docs:               http://127.0.0.1:8000/docs
 """
 import uuid
+import time
+from typing import Literal
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -11,7 +13,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from . import csv_mode, format_rules, review, risk, rubric_check, scrub, settings, store
+from . import population_check, csv_mode, format_rules, review, risk, rubric_check, scrub, settings, store
 from .parse import ParseError, parse_pdf
 from .schemas import (
     ParseResult,
@@ -51,39 +53,91 @@ async def parse(file: UploadFile = File(...)):
     return state.parsed
 
 
+def _binding(state) -> str:
+    return population_check.digest({"scrubbed": state.scrubbed.model_dump(),
+        "accepted": [fix.model_dump() for fix in state.accepted], "source": state.population_source,
+        "manifest": state.population_manifest})
+
+
+def _ensure_score(state):
+    if state.scored is None or state.score_binding != _binding(state) or not state.scored.gate_open:
+        raise HTTPException(403, "privacy check incomplete, stale or high-risk: run the check again")
+    if state.population_source == "jiff":
+        try:
+            if time.monotonic() - state.scored_at > 300 or population_check.manifest() != state.population_manifest:
+                raise population_check.PopulationError("JIFF result expired or population changed; run the privacy check again")
+            population_check.verify_manifest(state.population_manifest)
+        except population_check.PopulationError as err:
+            state.scored = None
+            state.score_binding = None
+            raise HTTPException(503, str(err)) from err
+
+
 @app.post("/scrub/{doc_id}", response_model=ScrubResult)
-def run_scrub(doc_id: str):
+def run_scrub(doc_id: str, source: Literal["local", "jiff"] = "local"):
     state = _state(doc_id, "parsed")
-    try:
-        state.scrubbed = scrub.scrub(state.parsed)
-    except (scrub.SetupError, FileNotFoundError) as err:
-        raise HTTPException(503, str(err)) from err  # never return a scrub that skipped detection
-    return state.scrubbed
+    with state.lock:
+        state.scored = None
+        state.score_binding = None
+        state.scrubbed = None
+        state.accepted = []
+        state.population_source = source
+        state.population_manifest = None
+        context = risk.VOCAB_SOURCE.set(source)
+        try:
+            state.scrubbed = scrub.scrub(state.parsed)
+        except (scrub.SetupError, FileNotFoundError, population_check.PopulationError) as err:
+            raise HTTPException(503, str(err)) from err
+        finally:
+            risk.VOCAB_SOURCE.reset(context)
+        return state.scrubbed
 
 
 @app.post("/score", response_model=ScoreResult)
 def run_score(req: ScoreRequest):
     state = _state(req.doc_id, "scrubbed")
-    state.accepted += [fix for fix in req.accepted if fix not in state.accepted]
-    state.scored = risk.score(state.scrubbed, state.accepted)
-    return state.scored
+    with state.lock:
+        state.scored = None  # invalidate before accepting edits or starting network work
+        state.score_binding = None
+        state.accepted += [fix for fix in req.accepted if fix not in state.accepted]
+        try:
+            if state.population_source == "jiff":
+                state.population_manifest = population_check.manifest()
+                binding = _binding(state)
+                profiles = risk.candidate_profiles(state.scrubbed, state.accepted)
+                counts = population_check.batch(profiles, binding, state.population_manifest)
+                def counter(profile):
+                    return counts[profiles.index(profile)]
+                result = risk.score(state.scrubbed, state.accepted, counter=counter)
+                result.population_id = state.population_manifest["population_id"]
+                result.population_version = str(state.population_manifest["version"])
+            else:
+                state.population_manifest = None
+                result = risk.score(state.scrubbed, state.accepted)
+            result.population_source = state.population_source
+            state.scored = result
+            state.score_binding = _binding(state)
+            state.scored_at = time.monotonic()
+            return result
+        except (population_check.PopulationError, FileNotFoundError) as err:
+            raise HTTPException(503, str(err)) from err
 
 
 @app.post("/review", response_model=ReviewResult)
 def run_review(req: ReviewRequest):
     state = _state(req.doc_id, "scored")
-    if not state.scored.gate_open:
-        raise HTTPException(403, "privacy gate is closed: accept fixes for high-risk participants first")
-    findings = format_rules.run_all(state.parsed)
-    if req.format_only:
-        # Local rules only; nothing crosses the network.
-        return ReviewResult(doc_id=req.doc_id, findings=findings, model_review="not_configured",
-                            model=review.model_config()["model"])
-    sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
-    model_findings, status, error = review.llm_review(sent, req.rubric_text)
-    findings += review.restore(model_findings, req.doc_id)
-    return ReviewResult(doc_id=req.doc_id, findings=findings, model_review=status,
-                        model=review.model_config()["model"], model_error=error)
+    with state.lock:
+        _ensure_score(state)
+        findings = format_rules.run_all(state.parsed)
+        if req.format_only:
+            # Local rules only; nothing crosses the network.
+            return ReviewResult(doc_id=req.doc_id, findings=findings, model_review="not_configured",
+                                model=review.model_config()["model"])
+        sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
+        model_findings, status, error = review.llm_review(sent, req.rubric_text)
+        findings += review.restore(model_findings, req.doc_id)
+        return ReviewResult(doc_id=req.doc_id, findings=findings, model_review=status,
+                            model=review.model_config()["model"], model_error=error)
 
 
 @app.post("/rubric-parse", response_model=RubricParseResult)
@@ -114,29 +168,29 @@ def run_rubric_check(doc_id: str, req: RubricCheckRequest):
     Uses the same privacy gate as /review: only gate-approved, tokenized text is sent.
     """
     state = _state(doc_id, "scored")
-    if not state.scored.gate_open:
-        raise HTTPException(403, "privacy gate is closed: accept fixes for high-risk participants first")
-    if not req.rubric:
-        raise HTTPException(400, "rubric is empty: load a rubric JSON with at least one criterion")
-    sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
-    model = rubric_check.model_config()["model"]
-    try:
-        results, status = rubric_check.check(sent, req.rubric)
-    except (rubric_check.LLMRequestError, ValueError) as err:
-        # Same contract as /review: report the failure instead of a bare 500.
-        return RubricCheckResult(doc_id=doc_id, results=[], model_review="failed", model=model,
-                                 model_error=f"{type(err).__name__}: {err}"[:300])
-    # Tokens in the model's comments go back to the original words, on this machine only.
-    key = scrub.load_key(doc_id)
-    for r in results:
-        r.comment = review.TOKEN.sub(lambda m: key.get(m.group(0), m.group(0)), r.comment)
-    return RubricCheckResult(doc_id=doc_id, results=results, model_review=status, model=model)
+    with state.lock:
+        _ensure_score(state)
+        if not req.rubric:
+            raise HTTPException(400, "rubric is empty: load a rubric JSON with at least one criterion")
+        sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
+        model = rubric_check.model_config()["model"]
+        try:
+            results, status = rubric_check.check(sent, req.rubric)
+        except (rubric_check.LLMRequestError, ValueError) as err:
+            # Same contract as /review: report the failure instead of a bare 500.
+            return RubricCheckResult(doc_id=doc_id, results=[], model_review="failed", model=model,
+                                     model_error=f"{type(err).__name__}: {err}"[:300])
+        # Tokens in the model's comments go back to the original words, on this machine only.
+        key = scrub.load_key(doc_id)
+        for r in results:
+            r.comment = review.TOKEN.sub(lambda m: key.get(m.group(0), m.group(0)), r.comment)
+        return RubricCheckResult(doc_id=doc_id, results=results, model_review=status, model=model)
 
 
 @app.get("/status")
-def status():
+def status(source: Literal["local", "jiff"] = "local"):
     """Which review model is configured, and whether local detection is fully installed."""
-    return {"model": review.model_config(), "setup": scrub.setup_status()}
+    return {"model": review.model_config(), "setup": scrub.setup_status(source)}
 
 
 CSV_TABLES: dict[str, bytes] = {}  # scrubbed CSVs kept in memory for download
@@ -221,8 +275,21 @@ SAMPLE_PDF = Path(__file__).resolve().parents[2] / "samples" / "demo-thesis.pdf"
 
 
 @app.get("/sample", response_class=FileResponse)
-def sample():
+def sample(source: Literal["local", "jiff"] = "local"):
     """The test thesis, so the UI can offer an explicit "Open sample document" action."""
+    if source == "jiff":
+        import fitz
+        # Team-authored fixture; matches jiff/fixtures/public-manifest.json.
+        with fitz.open() as pdf:
+            page = pdf.new_page(width=612, height=792)
+            page.insert_textbox(fitz.Rect(108, 108, 540, 684),
+                "Secure population check - fictional demonstration\n\n"
+                "Participant 3 is a senior majoring in Clockmaking: Theory who identifies as Indri.\n\n"
+                "Contact demo@example.org for the fictional study.\n\n"
+                "This sample matches the 8-record JIFF demo population. Omitting affiliation raises k from 1 to 5.",
+                fontsize=12)
+            return Response(pdf.tobytes(), media_type="application/pdf",
+                headers={"Content-Disposition": 'inline; filename="jiff-demo.pdf"'})
     return FileResponse(SAMPLE_PDF, media_type="application/pdf", filename="demo-thesis.pdf")
 
 

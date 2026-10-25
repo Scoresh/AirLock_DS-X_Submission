@@ -1,6 +1,6 @@
 # JIFF population-count prototype
 
-Implements Tier 2's first milestone from the project outline: an independent researcher / registrar demo using **real JIFF secret sharing**, not simulated private inputs. It does not replace the application's pandas risk engine or change its gate.
+Provides both the standalone browser demo and an integrated **real JIFF secret-sharing** source for the application's Privacy Check. See [product integration](../docs/JIFF_INTEGRATION.md) for the one-command launcher and gate lifecycle. The default local pandas mode remains available explicitly.
 
 ## Run
 
@@ -59,16 +59,10 @@ Observed on this machine (8 fictional rows, 3 fields):
 
 Seven test assertions/subtests passed. A browser Researcher also computed k=1 with a separate Node Registrar client; the browser reported 115 ms for computation. These measurements do not predict full-population runtime.
 
-## Next integration boundary
+## Integration status and remaining work
 
-`backend/app/risk.py:k_value(profile)` is the logical counting interface, but replacing only that function is insufficient:
+The product now selects a source before scrubbing, uses a public vocabulary for JIFF documents, batches the current/candidate profiles through an authenticated localhost Researcher bridge, and binds results to document state and the public population manifest. The bridge and Registrar run as independent Node processes. Both review routes enforce the same state binding and expiry. See [JIFF_INTEGRATION.md](../docs/JIFF_INTEGRATION.md).
 
-1. Decouple `risk.vocabulary()` and local profile extraction from the private population. Use a reviewed public codebook; do not fetch a codebook derived from confidential population records without approval.
-2. Normalize the same fields, labels, derived major fields and missing-value behavior as `risk_config.json`. Weighted `n` rows require a separate weighted protocol; this demo counts one row as one person.
-3. Batch the current profile and proposed generalizations into deterministic queries; benchmark before attempting 20,731 records.
-4. Make the backend consume a session-bound, authorized protocol result. Never trust a count posted by the browser to open `/review` or `/rubric-check`.
-5. Fail closed if a required MPC computation fails. Keep pandas as an explicit synthetic/local mode, rather than silently substituting it for MPC.
-
-No production privacy guarantees, institutional approvals or real registrar partnership are implied.
+The present demo remains limited to 64 normalized unweighted rows, eight fields and 32 categories per field. Full NSSE population scale, weighted aggregated records, broader domains, real-institution authentication, query policies, remote deployment and malicious-party protection remain future work. No real registrar partnership or institutional approval is implied.
 
 Official references: https://github.com/multiparty/jiff and https://multiparty.org/jiff/docs/jsdoc/.

@@ -33,10 +33,18 @@
     <section id="intake" class="intake" aria-labelledby="intake-title">
       <h1 id="intake-title" class="intake__title">Prepare your document for review.</h1>
       <p class="intake__lede">
-        Identifiers and re-identification risk are checked on this machine first.
+        Identifiers are checked locally first; population counts use the selected source.
         Only the prepared text can be sent to a review model, and only after the privacy gate passes.
       </p>
 
+      <div class="population-source">
+        <label for="population-source">Population source</label>
+        <select id="population-source">
+          <option value="local">Synthetic reference · local pandas</option>
+          <option value="jiff">Secure population check · JIFF prototype</option>
+        </select>
+        <p id="population-note">Count matches against the configured local synthetic reference.</p>
+      </div>
       <form id="upload-form" class="dropzone" novalidate>
         <input type="file" id="pdf" class="visually-hidden" accept="application/pdf,.pdf">
         <label for="pdf" class="dropzone__target" id="dropzone">
@@ -45,7 +53,7 @@
         </label>
         <p id="file-name" class="dropzone__file" aria-live="polite"></p>
         <div class="intake__actions">
-          <button type="submit" id="start" class="btn btn--primary" disabled>Start local check</button>
+          <button type="submit" id="start" class="btn btn--primary" disabled>Start privacy check</button>
           <button type="button" id="open-sample" class="btn btn--secondary">Open sample document</button>
         </div>
       </form>
@@ -55,7 +63,7 @@
 
       <ol class="method" aria-label="How it works">
         <li><span class="method__where">Local</span><span>Read the PDF and replace names, emails, phone numbers, student IDs and course sections with tokens.</span></li>
-        <li><span class="method__where">Local</span><span>Estimate how many people in a reference population match each described participant.</span></li>
+        <li><span class="method__where">Population</span><span>Estimate how many people in a reference population match each described participant.</span></li>
         <li><span class="method__where">Local</span><span>Apply suggested rewrites until no participant is above the high-risk threshold.</span></li>
         <li><span class="method__where method__where--model">Model</span><span>Send the prepared text for rubric review, if a model is configured. Format rules run locally either way.</span></li>
       </ol>

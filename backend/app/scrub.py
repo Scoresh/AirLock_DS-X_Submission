@@ -10,6 +10,7 @@ participant: class year, majors, affiliation and transfer history, matched again
 reference data's own vocabulary (see risk.py).
 """
 import json
+import os
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -17,7 +18,7 @@ from pathlib import Path
 from . import risk
 from .schemas import DirectIdentifier, Evidence, ParseResult, Participant, ScrubbedPage, ScrubResult
 
-KEYS_DIR = Path(__file__).resolve().parents[2] / "keys"
+KEYS_DIR = Path(os.getenv("STRANGERTHESIS_KEYS_DIR", str(Path(__file__).resolve().parents[2] / "keys")))
 
 EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b")
 PHONE = re.compile(r"(?<!\d)(?:\(\d{3}\)\s?|\d{3}[-.\s])\d{3}[-.\s]\d{4}(?!\d)")
@@ -74,7 +75,6 @@ def _known(sentence: str, values: list[str]) -> list[tuple[int, int, str]]:
     return sorted(found)
 
 
-@lru_cache(maxsize=1)
 def _not_names() -> set[str]:
     """Affiliations and majors from the reference data look like names to spaCy."""
     vocab = risk.vocabulary()
@@ -107,15 +107,21 @@ def _analyzer():
         raise SetupError(f"The spaCy model en_core_web_sm could not be loaded ({detail}). {SETUP_HINT}") from err
 
 
-def setup_status() -> dict:
+def setup_status(source: str = "local") -> dict:
     """What the UI shows before upload, so a broken install is visible instead of silent."""
     issues = []
     try:
         _analyzer()
     except SetupError as err:
         issues.append(str(err))
-    if not risk.DATA_FILE.exists():
+    if source == "local" and not risk.DATA_FILE.exists():
         issues.append("The reference data is missing: put the organizers' NSSE-synthetic.csv in data/ (ask Selina).")
+    if source == "jiff":
+        from .population_check import manifest, PopulationError
+        try:
+            manifest()
+        except PopulationError as err:
+            issues.append(str(err))
     return {"ready": not issues, "issues": issues}
 
 
@@ -300,3 +306,6 @@ def load_key(doc_id: str) -> dict[str, str]:
     """Token -> original text, for local restore in review.py. Never send this anywhere."""
     path = KEYS_DIR / f"{doc_id}.json"
     return json.loads(path.read_text()) if path.exists() else {}
+
+# Vocabulary now varies per document source; no cross-source cache.
+_not_names.cache_clear = lambda: None

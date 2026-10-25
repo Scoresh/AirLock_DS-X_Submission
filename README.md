@@ -18,7 +18,7 @@ It answers two DS+X prompts: **Data Scrubbing / Tokenization Tool** and **ETD Fo
 
 ## The pipeline
 
-Every step runs on the user's machine except step 5, which sends only scrubbed, gate-approved text.
+In local pandas mode, parsing, scrubbing, risk counts and format checks run locally. In JIFF mode, population counting exchanges secret shares with a separate Registrar party. Rubric/model features can also call the configured model; the participant document is sent only after the gate passes.
 
 1. **Parse** (`backend/app/parse.py`). PyMuPDF reads each page: text, margins, fonts and the printed page number with its position.
 2. **Scrub direct identifiers** (`backend/app/scrub.py`). Presidio with spaCy finds names; regex finds emails, phone numbers, BU IDs and course sections. Each becomes a token such as `[PERSON_01]`; the key file stays in `keys/`. A name found once is replaced everywhere, including all-caps title pages.
@@ -55,6 +55,23 @@ Copy-Item "$HOME\Downloads\NSSE-synthetic.csv" ..\data\NSSE-synthetic.csv
 Open http://127.0.0.1:8000 and click **Open sample document** for the demo thesis (`samples/demo-thesis.pdf`, described in `samples/README.md`). If anything required is missing, the page says what and how to fix it instead of running with partial checks.
 
 **Review model (optional).** Set `LLM_BASE_URL` (for example `http://localhost:11434/v1` for Ollama), `LLM_MODEL` and, if needed, `LLM_API_KEY` before starting the server. Without them, only local rules run and nothing is sent.
+
+## Experimental integrated JIFF source
+
+The Privacy Check now offers **Synthetic reference · local pandas** and **Secure population check · JIFF prototype**. JIFF uses a public codebook on the Researcher and a separate Registrar process that holds the population records. It opens only final counts; document review remains behind the backend gate.
+
+After installing backend dependencies and Node.js:
+
+```bash
+cd jiff
+npm install
+cd ..
+python backend/scripts/run_jiff_demo.py
+```
+
+Open the printed localhost address, select JIFF, then open the sample document: k=1 blocks review; accepting the affiliation rewrite gives k=5. The launcher creates temporary in-memory service credentials and uses eight team-authored fictional records. It does not use or publish the organizers' population data. `--self-test` verifies the real PDF → scrub → MPC → rewrite → gate → local-review path without calling a model.
+
+The prototype supports at most 64 rows, 8 fields and 32 categories per field; full-population performance and production Registrar authorization are not claimed. Do not deploy this launcher as a public service. See [architecture, configuration and verification](docs/JIFF_INTEGRATION.md).
 
 ## Reproduce the analysis and tests
 
