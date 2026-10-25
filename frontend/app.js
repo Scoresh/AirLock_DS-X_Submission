@@ -62,7 +62,7 @@ async function request(path, { method = "GET", body, form } = {}) {
   try {
     res = await fetch(path, opts);
   } catch {
-    throw Object.assign(new Error("The local server isn't responding. Check that it is running, then try again."), { status: 0 });
+    throw Object.assign(new Error("We couldn’t reach the document checker. Please try again in a moment."), { status: 0 });
   }
   if (!res.ok) {
     let detail = res.statusText;
@@ -123,21 +123,22 @@ function setLocalStatus(text) { $("status-local").textContent = text; }
 function renderModelStatus() {
   const m = state.model;
   let text;
-  if (!m) text = "Configuration unavailable";
+  if (!m) text = "Currently unavailable";
   else if (state.review?.model_review === "sent") text = `Prepared text sent to ${state.review.model}`;
   else if (state.review?.model_review === "not_implemented") text = `${m.model} configured · model review not implemented, nothing sent`;
   else if (state.review?.model_review === "failed") text = `${m.model} configured · review request failed`;
   // A review may have run earlier with no model. Don't leave the line stuck on
   // "Not configured" after the user swaps one in — reflect the current config.
   else if (m.configured) text = `${m.model}${m.endpoint ? ` (${m.endpoint})` : ""}`;
-  else if (state.review) text = "Not configured · nothing was sent";
-  else text = "Not configured · nothing will be sent";
+  else if (state.review) text = "Off · nothing sent to AI";
+  else text = "Off · add a reviewer in Settings";
   $("status-model").textContent = text;
 }
 
 /* ---------- intake ---------- */
-function showIntakeError(message) {
-  $("intake-error").innerHTML = `${esc(message)}`;
+function showIntakeError(message, details = "") {
+  $("intake-error").innerHTML = `${esc(message)}${details
+    ? `<details class="explain"><summary>Technical details</summary><p>${esc(details)}</p></details>` : ""}`;
   $("intake-error").hidden = false;
 }
 
@@ -204,18 +205,18 @@ async function startCheck(file, isSample = false) {
   state.isSample = isSample;
   $("intake-error").hidden = true;
   try {
-    setIntakeBusy(true, "Parsing PDF");
+    setIntakeBusy(true, "Reading your PDF");
     const form = new FormData();
     form.append("file", file, file.name);
     const [parsed, pdfDoc] = await Promise.all([request("/parse", { method: "POST", form }), openPdf(file)]);
     state.parsed = parsed;
     state.pdfDoc = pdfDoc;
 
-    setIntakeBusy(true, "Checking identifiers");
-    setLocalStatus("Checking identifiers");
+    setIntakeBusy(true, "Finding personal details");
+    setLocalStatus("Finding personal details");
     state.scrubbed = await request(`/scrub/${parsed.doc_id}?source=${state.populationSource}`, { method: "POST" });
 
-    setIntakeBusy(true, state.populationSource === "jiff" ? "Secure count · waiting for Registrar" : "Estimating risk");
+    setIntakeBusy(true, state.populationSource === "jiff" ? "Comparing details privately · this can take a moment" : "Checking participant descriptions");
     state.scored = await request("/score", { method: "POST", body: { doc_id: parsed.doc_id, accepted: [] } });
 
     setIntakeBusy(true, "Preparing comparison");
@@ -250,7 +251,7 @@ $("csv-form").addEventListener("submit", async (e) => {
   $("csv-error").hidden = true;
   $("csv-result").hidden = true;
   $("csv-start").disabled = true;
-  $("csv-progress").textContent = "Scrubbing table on this machine";
+  $("csv-progress").textContent = "Checking your table’s privacy";
   try {
     const form = new FormData();
     form.append("file", f, f.name);
@@ -311,7 +312,7 @@ async function enterWorkspace() {
   const n = state.parsed.pages.length;
   $("file-title").textContent = state.isSample ? "Sample document" : state.file.name;
   $("file-meta").textContent = `${state.file.name} · ${plural(n, "page")} · ${fileSize(state.file.size)}`;
-  setLocalStatus(state.scored.population_source === "jiff" ? `Identifiers local · JIFF count · ${plural(n, "page")}` : `Checked on this machine · ${plural(n, "page")}`);
+  setLocalStatus(`Privacy check complete · ${plural(n, "page")}`);
 
   const scored = state.scored.participants;
   const firstConcern = state.scrubbed.participants.find((p) => scoredById()[p.id]?.risk === "high");
@@ -820,8 +821,8 @@ function renderPrivacyPanel() {
   $("panel-privacy").innerHTML = `
     <h2 class="panel__title">Privacy check</h2>
     <p class="panel__intro">${state.scored.population_source === "jiff"
-      ? `Source: JIFF secure population check · ${esc(state.scored.population_id || "configured Registrar")} · version ${esc(state.scored.population_version || "unknown")}. Only secret shares cross to the Registrar. This is a small synthetic-data prototype.`
-      : "Source: configured local synthetic reference · pandas count."}
+      ? "Private comparison (JIFF demo). Estimates use fictional data."
+      : "Standard comparison. Estimates use sample data."}
       <strong>k</strong> is the estimated number of people who fit the same description: the smaller it is, the easier that person is to single out.</p>
     <details class="explain"><summary>How to read k</summary>
       <p>k of 1–4: high risk, blocks review. k of 5–19: medium, a narrow group. k of 20 or more: low.
@@ -836,7 +837,7 @@ function renderPrivacyPanel() {
 
     <section class="panel__section">
       <span class="label">Direct identifiers</span>
-      <p class="idsummary">${ids.length ? `<strong>${idText}</strong> replaced with tokens on this machine. The token key never leaves it.`
+      <p class="idsummary">${ids.length ? `<strong>${idText}</strong> replaced with placeholders. The key for restoring them is not sent to an AI reviewer.`
         : "No names, emails, phone numbers or student IDs were found."}</p>
     </section>
 
@@ -899,7 +900,7 @@ async function applyFixes(fixes) {
   state.review = null;
   state.rubricCheck = null;
   renderAll();
-  setBusy(state.scored?.population_source === "jiff" ? "Secure count · waiting for Registrar" : "Estimating risk");
+  setBusy(state.scored?.population_source === "jiff" ? "Comparing details privately · this can take a moment" : "Checking participant descriptions");
   try {
     state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: fixes } });
     setBusy("Preparing comparison");
@@ -1559,28 +1560,37 @@ async function refreshPopulationSetup() {
   $("population-retry").disabled = true;
   $("population-retry").hidden = true;
   $("population-note").textContent = state.populationSource === "jiff"
-    ? "Experimental Registrar count. Configure the local bridge and public codebook first; both parties must be online. A failed check never falls back to pandas. Source is fixed for this document."
-    : "Count matches against the configured local synthetic reference. Source is fixed for this document.";
+    ? "Compare participant details without sending them in readable form to the data holder. This demo uses fictional data."
+    : "Compare participant details with a sample dataset to see how easily someone could stand out.";
   try {
-    setLocalStatus("Checking source availability");
+    setLocalStatus("Getting your privacy check ready");
     const status = await request(`/status?source=${state.populationSource}`);
     state.model = status.model;
     const jiff = status.population_sources?.jiff;
     const jiffOption = $("population-source").querySelector('option[value="jiff"]');
     if (jiff) {
       jiffOption.disabled = jiff.configured === false && state.populationSource !== "jiff";
-      jiffOption.textContent = jiff.available ? "Secure population check · JIFF prototype"
-        : jiff.configured ? "Secure population check · temporarily unavailable" : "Secure population check · not enabled";
-      if (!jiff.available) $("population-note").textContent += " " + jiff.message;
-      $("population-retry").hidden = jiff.available;
+      jiffOption.textContent = jiff.available ? "Private comparison (JIFF demo)"
+        : jiff.configured ? "Private comparison · try again shortly" : "Private comparison · unavailable";
+      if (!jiff.available && state.populationSource === "jiff") {
+        $("population-note").textContent = jiff.configured
+          ? "The private comparison isn’t ready right now. Try again in a moment, or choose Standard comparison."
+          : "Private comparison isn’t available here. Please choose Standard comparison.";
+      }
+      $("population-retry").hidden = jiff.available || state.populationSource !== "jiff";
     }
     const hosted = status.deployment_mode === "hosted-demo";
     $("deployment-notice").hidden = !hosted;
-    if (hosted) $("deployment-notice").textContent = "Hosted demonstration: uploaded documents are processed on this server. The JIFF parties run on the same host using a small fictional population; this demonstrates the protocol, not an institutional Registrar connection. Use fictional or public documents.";
+    $("upload-hint").textContent = hosted
+      ? "Your file will be checked on this website’s server."
+      : "Your file will be checked by the server running on your computer.";
     state.setupBlocked = !status.setup?.ready;
     if (state.setupBlocked) {
-      showIntakeError(status.setup.issues.join(" · "));
-      setLocalStatus("Setup incomplete · check the selected population source");
+      showIntakeError(state.populationSource === "jiff"
+        ? "The private comparison isn’t ready. Try again in a moment, or choose Standard comparison."
+        : "The standard comparison isn’t ready. Choose Private comparison if available, or try again later.",
+      status.setup.issues.join(" · "));
+      setLocalStatus("Check unavailable · try again or change the method");
     } else {
       $("intake-error").hidden = true;
       setLocalStatus("Ready for a document");
