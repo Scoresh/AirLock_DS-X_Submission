@@ -11,6 +11,9 @@ spacy==3.8.16
 # (OverflowError: Python int too large to convert to C ssize_t). 3.0.9 is the
 # last wheel whose uint64 key conversion is correct. Do not bump without testing
 # `spacy.load("en_core_web_sm")`.
-preshed==3.0.9; sys_platform == "win32"  # no 3.0.9 wheel for macOS + Python 3.13; Mac keeps the default
+preshed==3.0.9; sys_platform == "win32"
+# preshed 3.0.14 raises the same OverflowError on macOS and Linux (checked on macOS, Python 3.13);
+# 3.0.13 loads the model fine and has wheels for Python 3.13.
+preshed==3.0.13; sys_platform != "win32"
 # The English model, installed by pip like any other package (no separate download step).
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
