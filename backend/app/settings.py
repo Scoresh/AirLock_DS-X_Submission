@@ -35,12 +35,13 @@ PROVIDERS: dict[str, dict] = {
     "claude": {
         "label": "Anthropic Claude",
         "base_url": "https://api.anthropic.com/v1",
-        "default_model": "claude-5-5-sonnet",
+        "default_model": "claude-sonnet-5-5",
         "key_hint": "Anthropic API key (sk-ant-...)",
         # Only broadly-available aliases are listed. Opus and dated model IDs are
         # account/tier-dependent and 404 on many accounts; use "Other…" in the UI
         # to enter a specific model your account has access to.
         "models": [
+            "claude-sonnet-5-5",
             "claude-haiku-5-5",
         ],
         "api_style": "anthropic",

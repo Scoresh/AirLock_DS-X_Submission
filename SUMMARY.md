@@ -37,4 +37,4 @@ Nothing crosses the network while anyone in the document is high-risk. Only toke
 
 Python 3.13 + FastAPI on the backend, Presidio/spaCy/regex for detection, pandas for risk scoring, PyMuPDF for PDFs, and a plain HTML/JS frontend with a heatmap and side-by-side view.
 
-Currently the scrubbing and risk scoring are real, while PDF parsing and the review step still return example data from `/mock` as stubs being replaced one at a time.
+Every step is real: PDF parsing, scrubbing, risk scoring, the twelve local format rules, CSV mode, and the model review and rubric check through the endpoint chosen in Settings. Without a configured model, only the local checks run and nothing is sent. `/mock` holds example data for each contract.
