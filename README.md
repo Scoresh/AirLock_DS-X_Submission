@@ -1,146 +1,96 @@
 # StrangerThesis
 
-Scrub a document on your own machine and check who in it could be re-identified.
+**Anything you submit can be traced back to the people in it. StrangerThesis scrubs it on your machine first, then lets AI review it.**
 
-Scrubbing and risk scoring are real; PDF parsing and rubric review still return the example data in `/mock`. Replace one stub at a time with real code. As long as your function returns the same shape, nobody else's code breaks.
+Researchers and students increasingly paste drafts into AI tools and submit work to public repositories. Removing names is not enough: in the organizers' NSSE data, **14.9% of respondents are unique** on five ordinary details (class year, affiliation, major, second major, transfer history), and **52%** once survey year and program are added. StrangerThesis finds direct identifiers, measures re-identification risk with **k-anonymity** against a reference population, suggests rewrites until nobody is singled out, and only then lets the prepared text reach the review model the user chooses.
 
-## Running
+It answers two DS+X prompts: **Data Scrubbing / Tokenization Tool** and **ETD Formatting Compliance Checker**.
 
-### macOS
-
-cd backend
-
-#### 1. Create and activate a virtual environment
-
-python3.12 -m venv .venv
-source .venv/bin/activate
-
-#### 2. Install dependencies
-
-pip install --upgrade pip
-pip install -r requirements.txt
-
-#### 3. Download the local spaCy model (small NLP model, not an LLM)
-
-python -m spacy download en_core_web_sm
-
-#### 4. Add the organizers' reference data (ask Selina for the file)
-
-cp ~/Downloads/NSSE-synthetic.csv ../data/NSSE-synthetic.csv
-
-#### 5. Run the server
-uvicorn app.main:app --reload
-
-### Windows (PowerShell)
-
-cd backend
-
-#### 1. Create and activate a virtual environment
-
-py -3.12 -m venv .venv
-.venv\Scripts\Activate.ps1
-
-#### 2. Install dependencies
-
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-
-#### 3. Download the local spaCy model
-
-python -m spacy download en_core_web_sm
-
-#### 4. Add the organizers' reference data (ask Selina for the file)
-
-Copy-Item "$HOME\Downloads\NSSE-synthetic.csv" ..\data\NSSE-synthetic.csv
-
-#### 5. Run the server
-uvicorn app.main:app --reload
-
-
-## Tech stack
-
-Everything runs locally unless marked otherwise.
-
-| Layer | Tech |
+| Result | Where |
 |---|---|
-| Backend / API | Python 3.13, FastAPI, Uvicorn, Pydantic (data contracts) |
-| Name detection | Microsoft Presidio + spaCy `en_core_web_sm` (small local NLP model, not an LLM) |
-| Emails, phones, BU IDs | Regex |
-| Participant profiles | Rule-based extraction (patterns like "19-year-old", "majoring in…", "from…") |
-| Re-identification risk | pandas: k = number of matching respondents in the reference data |
-| Reference population | Organizers' NSSE synthetic data: 20,731 fictional respondents (git-ignored, ask Selina) |
-| Generalization | Major → its field → omitted; second major → field → "another field"; affiliation and transfer history → omitted |
-| Token storage | Local JSON key file in `keys/`, git-ignored, never sent anywhere |
-| PDF | PyMuPDF (test PDF built; parsing in progress) |
-| Frontend | Plain HTML + JavaScript test page (heatmap, side-by-side view) |
-| Rubric review | Configurable LLM endpoint (in progress). The only network call, and it receives only tokenized, gate-approved text |
-| Dev tools | Kiro, Git, GitHub |
+| Unique respondents fall from 14.9% to 0.0% after generalization; low-risk rises from 51.8% to 99.0% | [docs/RISK_REPORT.md](docs/RISK_REPORT.md) |
+| Smallest affiliation group: 26.3% unique vs 11.2% in the largest | [docs/RISK_REPORT.md](docs/RISK_REPORT.md), [docs/ETHICS.md](docs/ETHICS.md) |
+| 13 of 13 planted identifiers replaced, 0 false positives; 6 of 6 participants scored correctly | [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) |
+| 12 format rules from the BU guide; 6 of 6 planted format errors found, 0 false alarms | [docs/VALIDATION.md](docs/VALIDATION.md), [docs/RULES_CHECKLIST.md](docs/RULES_CHECKLIST.md) |
+| 37 automated tests, including a leak test on the outgoing model request | `tests/` |
+
+![Uniqueness curve](docs/img/uniqueness_curve.png)
+
+## The pipeline
+
+Every step runs on the user's machine except step 5, which sends only scrubbed, gate-approved text.
+
+1. **Parse** (`backend/app/parse.py`). PyMuPDF reads each page: text, margins, fonts and the printed page number with its position.
+2. **Scrub direct identifiers** (`backend/app/scrub.py`). Presidio with spaCy finds names; regex finds emails, phone numbers, BU IDs and course sections. Each becomes a token such as `[PERSON_01]`; the key file stays in `keys/`. A name found once is replaced everywhere, including all-caps title pages.
+3. **Profile and score** (`backend/app/risk.py`, `backend/app/risk_config.json`). Rules extract each described participant's quasi-identifiers. **k** is the number of respondents in the reference data who match all of them. Risk: k 1-4 high, 5-19 medium, 20+ low.
+4. **Privacy gate and generalization.** While any participant has k < 5 the backend refuses review. Suggested rewrites (major to field, details omitted) are applied to the sentence itself and re-scored.
+5. **Review** (`backend/app/review.py`). The prepared text and rubric go to the configured OpenAI-compatible endpoint (TerrierGPT, a lab-approved model or local Ollama). Tokens in the feedback are restored locally.
+6. **Format rules** (`backend/app/format_rules.py`). Twelve checks from the BU thesis guide, each citing its page.
+7. **CSV mode** (`backend/app/csv_mode.py`). Scrub a whole data table: identifier columns become tokens, quasi-identifiers are generalized, and the risk report compares k before and after. The key file restores the exact table.
+
+The web app (`frontend/`) shows the document, a page index colored by findings, the privacy check with per-suggestion rewrites, the gate, review annotations, and a side-by-side view of the original and exactly what the model receives.
 
 ## Run it
 
-Use Python 3.13 (3.14 has no prebuilt pydantic-core wheel yet).
+Use **Python 3.13** (pandas 2.2.3 has no wheel for 3.14). `requirements.txt` includes the spaCy model and pins `preshed` (3.0.14 crashes spaCy).
+
+macOS / Linux, from `backend/`:
 
 ```bash
-cd backend
 python3.13 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt   # includes the spaCy English model
-cp ~/Downloads/NSSE-synthetic.csv ../data/NSSE-synthetic.csv   # the organizers' file
+pip install -r requirements.txt
+cp ~/Downloads/NSSE-synthetic.csv ../data/NSSE-synthetic.csv   # the organizers' file, ask Selina
 uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000 for the UI, http://127.0.0.1:8000/docs to try each endpoint. The test thesis is `samples/test-thesis.pdf`; see `samples/README.md` for what it should produce.
+Windows PowerShell, from `backend\`:
 
-## Pipeline
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+Copy-Item "$HOME\Downloads\NSSE-synthetic.csv" ..\data\NSSE-synthetic.csv
+.venv\Scripts\python -m uvicorn app.main:app --reload
+```
 
-| Step | Endpoint | File | Owner |
-|---|---|---|---|
-| 1. Parse PDF into pages + layout | `POST /parse` | `parse.py` | Aedyn + Florian |
-| 2. Tokenize names/emails/IDs, extract participant profiles | `POST /scrub/{doc_id}` | `scrub.py` | Selina |
-| 3. k-value, suggestions, privacy gate | `POST /score` | `risk.py` | Selina |
-| 4a. Formatting rules (code, no LLM) | inside `/review` | `format_rules.py` | Aedyn + Florian |
-| 4b. LLM rubric review + token restore | `POST /review` | `review.py` | Dan |
-| Side-by-side "what the LLM saw" | `GET /llm-view/{doc_id}` | `main.py` | Dan |
-| API glue, integration | | `main.py` | Dan |
-| UI | | `frontend/index.html` | TBD |
+Open http://127.0.0.1:8000 and click **Open sample document** for the demo thesis (`samples/demo-thesis.pdf`, described in `samples/README.md`). If anything required is missing, the page says what and how to fix it instead of running with partial checks.
 
-`/review` returns 403 while the gate is closed.
+**Review model (optional).** Set `LLM_BASE_URL` (for example `http://localhost:11434/v1` for Ollama), `LLM_MODEL` and, if needed, `LLM_API_KEY` before starting the server. Without them, only local rules run and nothing is sent.
 
-## Data contracts
+## Reproduce the analysis and tests
 
-Defined in `backend/app/schemas.py`, with examples in `mock/`:
+From the repository root, with the backend environment active:
 
-- `parse.json` — pages with text, margins, fonts, page-number position
-- `scrub.json` — scrubbed text, direct identifiers (tokens only), participants with NSSE attributes
-- `score.json` — k, risk level, generalization suggestions, `gate_open`
-- `review.json` — findings with page, quoted rubric criterion, and `source: rule | llm`
+```bash
+pip install -r backend/requirements-dev.txt
+python -m pytest                              # 37 tests on a Faker fixture
+python backend/scripts/profile_data.py         # docs/DATA_SCHEMA.md (aggregates only)
+python backend/scripts/risk_report.py          # docs/RISK_REPORT.md and charts
+python backend/scripts/validate_rules.py       # docs/RULES_CHECKLIST.md and docs/VALIDATION.md
+python backend/scripts/test_results.py         # docs/TEST_RESULTS.md
+python backend/scripts/scrub_csv.py data/NSSE-synthetic.csv   # CSV mode from the command line
+```
 
-**Change a contract only after telling the team**, and update the mock file in the same commit.
+## Data and privacy rules
 
-## Privacy rules for the code
+- The organizers' NSSE synthetic data (20,731 fictional respondents) lives in `data/`, which is git-ignored. Scripts report aggregates only, with counts below 5 suppressed.
+- Tests use a Faker fixture (`tests/fixtures/`) with the same columns; no real rows are copied into tests or docs.
+- Token key files live in `keys/` (git-ignored) and are never returned by the API or sent anywhere.
+- The only network call is `review._send`, and it only receives `ScrubResult` text after the gate opens. A test records every outgoing request and fails if a name, email, phone number or ID appears in it.
+- Quasi-identifiers and generalization rules are configured in `backend/app/risk_config.json`, not in code.
 
-- The token key (`token -> original`) is written only to `keys/<doc_id>.json`. It is git-ignored and never returned by the API.
-- `review.py` receives only `ScrubResult`. Never pass original page text to the LLM.
-- No external API calls anywhere except the configured LLM endpoint in `review.py`.
+## Documents
 
-## What we score on
-
-The organizers' NSSE synthetic data (`data/NSSE-synthetic.csv`, 20,731 respondents, 2014–2024) is fictional by design:
-majors are invented ("Clockmaking: Technology") and lemur species stand in for an identity group.
-
-| Detail | Column | Made vaguer to |
-|---|---|---|
-| Class year | `Class` | (kept) |
-| Major | `MAJfirst` | its field (`Clockmaking`) → omitted |
-| Second major | `MAJsecond` | its field → "another field" |
-| Affiliation | `affiliation` | omitted |
-| Transfer student | `begincol` | omitted |
-
-There are no weights; each row is one respondent, so k = number of matching rows.
-3,106 of the 4,610 combinations of these five details belong to exactly one respondent.
-
-Risk: k 1–4 high (blocks), 5–19 medium (warns), 20+ low.
+| File | Contents |
+|---|---|
+| [docs/DATA_SCHEMA.md](docs/DATA_SCHEMA.md) | Columns, types, null shares and privacy role of each |
+| [docs/RISK_REPORT.md](docs/RISK_REPORT.md) | Uniqueness curve, k distribution before and after generalization, risk by group |
+| [docs/RULES_CHECKLIST.md](docs/RULES_CHECKLIST.md) | Each format rule, its BU guide page and how it is checked |
+| [docs/VALIDATION.md](docs/VALIDATION.md) | Format rules on the demo thesis: found vs planted |
+| [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) | Identifier detection, participants, round trip, test run |
+| [docs/ETHICS.md](docs/ETHICS.md) | Data sourcing, privacy design, fairness, limitations, misuse |
 
 ## Team workflow
 
-- Work on a branch (`feature/<what>`), open a PR to `main`. Don't push to `main` directly.
-- After every code change, please add a summary to `kiro_change_logs/` (see `.kiro/steering/change-logging.md`).
+- Work on a branch (`feature/<what>`) and open a PR to `main`.
+- After every code change, add a summary to `kiro_change_logs/` (see `.kiro/steering/change-logging.md`).
+- Change a data contract in `backend/app/schemas.py` only after telling the team, and update `mock/` in the same commit.

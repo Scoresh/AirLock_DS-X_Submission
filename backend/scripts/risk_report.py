@@ -149,6 +149,23 @@ def main() -> None:
     ]
     for label, dist in levels:
         lines.append(f"| {label} | " + " | ".join(f"{dist[name]:,} ({dist[name] / n:.1%})" for name, _, _ in BINS) + " |")
+    # 3. Who carries the risk: uniqueness by affiliation group (groups have 800+ members, no small counts)
+    exact = LEVELS[0][1]
+    df["_k"] = class_sizes(df, exact)
+    by_group = (df.groupby("affiliation")["_k"].agg(size="size", unique=lambda k: (k == 1).mean(),
+                                                   high=lambda k: (k < 5).mean())
+                .sort_values("size", ascending=False))
+    lines += [
+        "",
+        "## 3. Who carries the risk",
+        "",
+        "Share of each affiliation group that is unique or high risk on the exact details (level 0). "
+        "Smaller groups are far easier to single out, so the cost of generalization falls mostly on them.",
+        "",
+        "| Affiliation | Respondents | Unique (k = 1) | High risk (k < 5) |",
+        "|---|---|---|---|",
+    ]
+    lines += [f"| {g} | {int(r['size']):,} | {r['unique']:.1%} | {r['high']:.1%} |" for g, r in by_group.iterrows()]
     lines += [
         "",
         "## How to read this",
@@ -164,6 +181,7 @@ def main() -> None:
     print(f"wrote docs/RISK_REPORT.md and 2 charts for {n:,} respondents")
     for label, u, h, med in curve:
         print(f"  {label:<22} unique {u:6.1%}  k<5 {h:6.1%}  median k {med:,}")
+    print(by_group.to_string(formatters={"unique": "{:.1%}".format, "high": "{:.1%}".format}))
     for label, dist in levels:
         print(f"  {label:<38} " + "  ".join(f"{name.split(' (')[0]}: {dist[name] / n:5.1%}" for name, _, _ in BINS))
 

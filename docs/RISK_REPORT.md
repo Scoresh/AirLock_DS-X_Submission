@@ -33,6 +33,20 @@ Each level applies one more rule from `backend/app/risk_config.json` to every re
 | 4. + affiliation omitted | 39 (0.2%) | 132 (0.6%) | 534 (2.6%) | 20,026 (96.6%) |
 | 5. + transfer history omitted | 4 (0.0%) | 22 (0.1%) | 173 (0.8%) | 20,532 (99.0%) |
 
+## 3. Who carries the risk
+
+Share of each affiliation group that is unique or high risk on the exact details (level 0). Smaller groups are far easier to single out, so the cost of generalization falls mostly on them.
+
+| Affiliation | Respondents | Unique (k = 1) | High risk (k < 5) |
+|---|---|---|---|
+| Ring-tailed lemur | 10,460 | 11.2% | 17.0% |
+| Indri | 3,794 | 15.1% | 24.6% |
+| Aye-aye | 1,980 | 15.6% | 29.4% |
+| Golden bamboo lemur | 1,279 | 22.3% | 39.4% |
+| Crowned lemur | 1,208 | 19.6% | 38.5% |
+| Diademed sifaka | 1,146 | 24.5% | 45.1% |
+| Gray mouse lemur | 864 | 26.3% | 47.2% |
+
 ## How to read this
 
 - The data is synthetic and fictional by design (invented majors, lemur species standing in for an identity group), so these are estimates of how identifying such details are, not counts of real students.
