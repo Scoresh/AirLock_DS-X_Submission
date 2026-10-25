@@ -13,3 +13,6 @@ __pycache__/
 backend/.venv*/
 *.log
 !kiro_change_logs/_audit.log
+
+# JIFF installed dependencies
+node_modules/

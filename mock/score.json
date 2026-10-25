@@ -115,5 +115,8 @@
       ]
     }
   ],
-  "gate_open": false
+  "gate_open": false,
+  "population_source": "local",
+  "population_id": null,
+  "population_version": null
 }

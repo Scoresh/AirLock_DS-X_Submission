@@ -575,3 +575,9 @@ details.explain p { margin-top: 6px; }
 .settings__input:focus-visible { outline: 2px solid var(--pine); outline-offset: 1px; }
 .settings__hint { font-size: 12px; color: var(--text-2); margin: 0; }
 .settings__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+/* Population source is chosen before upload and fixed for that document. */
+.population-source { margin: 24px 0; max-width: 620px; }
+.population-source label { display: block; margin-bottom: 8px; font-weight: 600; }
+.population-source select { width: 100%; padding: 10px; font: inherit; color: inherit; background: var(--surface, #fffefa); border: 1px solid #b8beb3; border-radius: 4px; }
+.population-source p { font-size: 14px; color: #62685f; }

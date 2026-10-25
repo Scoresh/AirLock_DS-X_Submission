@@ -1,0 +1,14 @@
+{
+  "name": "strangerthesis-jiff-count",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js",
+    "bridge": "node bridge.js",
+    "registrar": "node registrar.js"
+  },
+  "dependencies": {
+    "jiff-mpc": "1.0.0"
+  }
+}

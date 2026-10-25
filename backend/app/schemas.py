@@ -138,6 +138,9 @@ class ScoreResult(BaseModel):
     doc_id: str
     participants: list[ScoredParticipant]
     gate_open: bool
+    population_source: Literal["local", "jiff"] = "local"
+    population_id: str | None = None
+    population_version: str | None = None
 
 
 class AcceptedFix(BaseModel):
