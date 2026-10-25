@@ -78,3 +78,20 @@ Private rows must already be normalized to the labels and derived fields in `ris
 Maximum 64 rows, 8 fields, 32 categories per field and 32 distinct candidate profiles per batch. This is integrated functionality on a small synthetic population, not a benchmark or deployment against all 20,731 NSSE records. Larger domains and population scale need protocol/performance work; batches currently have a 65-second bridge request timeout.
 
 Exact output counts, public domains, population size and traffic metadata are revealed. Repeated queries can expose membership. Query authorization, budgets, threshold-only output/suppression policy, audited public-domain governance, remote-institution deployment and malicious-party security remain required before sensitive real-data use. Passing k>=5 is not a guarantee of anonymity.
+
+## Hosted synthetic demonstration on Render
+
+The default web-only `uvicorn` command does not launch the JIFF bridge or Registrar. The repository's Render blueprint now uses:
+
+- Build: `bash backend/scripts/render-build.sh`
+- Start: `python backend/scripts/run_jiff_demo.py --hosted-demo --host 0.0.0.0`
+
+The build installs the Python and locked JIFF dependencies. Render's native Python runtime includes Node.js and pnpm. The explicit hosted launcher uses Render's public `PORT` for FastAPI, binds the relay/bridge to loopback on internal ports, creates in-memory service tokens and supplies the bundled public manifest and fictional Registrar population automatically. Existing NSSE secret-file configuration for local pandas mode is preserved.
+
+For an existing manually configured Render service, verify its dashboard Build Command and Start Command match these values and redeploy. A Git merge alone does not establish that its saved service configuration changed. No separate manual `JIFF_MANIFEST` environment value is required when using this launcher.
+
+Hosted mode displays a notice that documents are processed on the server, the two JIFF parties share a host, and the population is fictional. It is for public/fictional demonstration documents only. It is not a real Registrar deployment and does not provide cross-institution isolation. The earlier restriction against publishing the ordinary local launcher still applies; public binding requires the explicit `--hosted-demo` flag.
+
+`/status` now reports `population_sources.jiff.available` without exposing credentials. Unconfigured or mismatched bridge setups are not advertised as selectable ready sources; users see a readable availability message rather than a raw environment-variable error. Bridge availability alone does not prove the Registrar will complete the next computation; a later count failure still keeps the gate closed.
+
+Validation: 60 Python tests passed; the hosted-mode real HTTP/MPC self-test completed the k=1 → blocked review → rewrite → k=5 → local review flow. The deployed public site must still be checked after the Render settings/deployment update.

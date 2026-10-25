@@ -31,7 +31,7 @@ def manifest() -> dict:
         raise PopulationError("JIFF public manifest is missing or invalid; configure JIFF_MANIFEST") from exc
 
 
-def call(path: str, payload=None) -> dict:
+def call(path: str, payload=None, timeout: int = 65) -> dict:
     url = os.getenv("JIFF_BRIDGE_URL", "http://127.0.0.1:9112").rstrip("/")
     parsed = urlparse(url)
     token = os.getenv("JIFF_BRIDGE_TOKEN", "")
@@ -40,7 +40,7 @@ def call(path: str, payload=None) -> dict:
     data = json.dumps(payload).encode() if payload is not None else None
     request = Request(url + path, data=data, headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
     try:
-        with urlopen(request, timeout=65) as response:
+        with urlopen(request, timeout=timeout) as response:
             result = json.load(response)
         if not isinstance(result, dict):
             raise ValueError("Expected bridge object")
@@ -70,3 +70,18 @@ def verify_manifest(public: dict) -> None:
     current = call("/manifest")
     if current.get("fingerprint") != digest(public):
         raise PopulationError("JIFF population version changed; run the privacy check again")
+
+
+def availability() -> dict:
+    """Expose availability, never service credentials, to the source selector."""
+    try:
+        public = manifest()
+        if len(os.getenv("JIFF_BRIDGE_TOKEN", "")) < 32:
+            raise PopulationError("Missing bridge configuration")
+        live = call("/manifest", timeout=3)
+        if live.get("fingerprint") != digest(public):
+            raise PopulationError("Manifest mismatch")
+        return {"available": True, "population_id": public["population_id"],
+                "population_version": str(public["version"])}
+    except PopulationError:
+        return {"available": False, "message": "JIFF is not enabled or ready on this deployment. Use the local synthetic reference, or ask the service owner to start the JIFF demo services."}

@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import signal
 import shutil
 import subprocess
 import sys
@@ -24,16 +25,25 @@ def request(url, data=None, headers=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--node', default=shutil.which('node'))
-    parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--port', type=int, default=int(os.getenv('PORT', '8000')))
+    parser.add_argument('--host', default='127.0.0.1')
+    parser.add_argument('--hosted-demo', action='store_true', help='Explicitly enable the synthetic co-hosted demonstration')
     parser.add_argument('--relay-port', type=int, default=9111)
     parser.add_argument('--bridge-port', type=int, default=9112)
     parser.add_argument('--self-test', action='store_true')
     args = parser.parse_args()
     if not args.node:
         parser.error('Node.js is required; pass --node /path/to/node')
+    if args.host != '127.0.0.1' and not args.hosted_demo:
+        parser.error('Public binding requires --hosted-demo; this is only a fictional-data demonstration')
     env = os.environ.copy()
+    if args.hosted_demo:
+        env['STRANGERTHESIS_DEPLOYMENT_MODE'] = 'hosted-demo'
+    def stop_on_signal(signum, frame):
+        raise KeyboardInterrupt
+    signal.signal(signal.SIGTERM, stop_on_signal)
     env.update({
-        'PORT':str(args.relay_port), 'JIFF_BRIDGE_PORT':str(args.bridge_port),
+        'JIFF_BRIDGE_PORT':str(args.bridge_port),
         'JIFF_RELAY_URL':f'http://127.0.0.1:{args.relay_port}',
         'JIFF_BRIDGE_URL':f'http://127.0.0.1:{args.bridge_port}',
         'JIFF_COORD_TOKEN':secrets.token_hex(32), 'JIFF_BRIDGE_TOKEN':secrets.token_hex(32),
@@ -41,7 +51,8 @@ def main():
         'JIFF_POPULATION':str(ROOT/'jiff/fixtures/population.json'),
     })
     # Verify the integrated JIFF route works without an NSSE file on the Researcher.
-    env['NSSE_DATA_FILE'] = str(ROOT/'data'/'absent-for-jiff-demo.csv')
+    if not args.hosted_demo:
+        env['NSSE_DATA_FILE'] = str(ROOT/'data'/'absent-for-jiff-demo.csv')
     if args.self_test:
         for key in ('LLM_BASE_URL','LLM_MODEL','LLM_API_KEY'):
             env.pop(key, None)
@@ -54,8 +65,9 @@ def main():
             commands = [[args.node,'server.js'], [args.node,'bridge.js'], [args.node,'registrar.js']]
             try:
                 for command in commands:
-                    processes.append(subprocess.Popen(command,cwd=ROOT/'jiff',env=env,stdout=log,stderr=log))
-                processes.append(subprocess.Popen([sys.executable,'-m','uvicorn','app.main:app','--host','127.0.0.1','--port',str(args.port)],
+                    child_env = dict(env, PORT=str(args.relay_port)) if command[1] == 'server.js' else env
+                    processes.append(subprocess.Popen(command,cwd=ROOT/'jiff',env=child_env,stdout=log,stderr=log))
+                processes.append(subprocess.Popen([sys.executable,'-m','uvicorn','app.main:app','--host',args.host,'--port',str(args.port)],
                     cwd=ROOT/'backend',env=env,stdout=log,stderr=log))
                 url = f'http://127.0.0.1:{args.port}'
                 for attempt in range(100):
@@ -65,13 +77,14 @@ def main():
                         status = request(url+'/status?source=jiff')
                         request(env['JIFF_BRIDGE_URL']+'/manifest',headers={'Authorization':'Bearer '+env['JIFF_BRIDGE_TOKEN']})
                         if not status['setup']['ready']:
-                            raise RuntimeError('Setup incomplete: ' + '; '.join(status['setup']['issues']))
+                            time.sleep(.2)
+                            continue
                         break
                     except (urllib.error.URLError, TimeoutError):
                         time.sleep(.2)
                 else:
                     raise RuntimeError('Services did not become ready')
-                print('Integrated synthetic JIFF demo:',url,flush=True)
+                print('Hosted synthetic JIFF demo:' if args.hosted_demo else 'Integrated synthetic JIFF demo:',url,flush=True)
                 print('Select Secure population check · JIFF prototype, then Open sample document.',flush=True)
                 if args.self_test:
                     with urllib.request.urlopen(url+'/sample?source=jiff') as response:
