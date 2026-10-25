@@ -56,14 +56,37 @@ def build_payload(scrubbed: ScrubResult, rubric_text: str | None, model: str) ->
     user = f"RUBRIC:\n{rubric_text or DEFAULT_RUBRIC}\n\nDOCUMENT:\n{pages}"
     return {
         "model": model,
-        "temperature": 0,
         "messages": [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user}],
         "response_format": {"type": "json_object"},
     }
 
 
 def _send(base_url: str, api_key: str, payload: dict) -> str:
-    """POST one chat completion and return the assistant's text. The only network call in the app."""
+    """POST one chat request and return the assistant's text. The only network call in the app.
+
+    Routes Anthropic Claude through its native Messages API (/v1/messages) and
+    everything else through the OpenAI-compatible /chat/completions endpoint, so
+    /review works for the same providers the Settings page offers (and matches
+    rubric_parsing/llm.py). The OpenAI-shaped `payload` is translated for Anthropic.
+    """
+    style = os.getenv("LLM_API_STYLE", "").strip().lower()
+    if style not in ("openai", "anthropic"):
+        style = "anthropic" if "api.anthropic.com" in base_url else "openai"
+
+    if style == "anthropic":
+        system = next((m["content"] for m in payload["messages"] if m["role"] == "system"), "")
+        user = next((m["content"] for m in payload["messages"] if m["role"] == "user"), "")
+        body = {"model": payload["model"], "max_tokens": 4096, "system": system,
+                "messages": [{"role": "user", "content": user}]}
+        headers = {"Content-Type": "application/json", "anthropic-version": "2026-10-21"}
+        if api_key:
+            headers["x-api-key"] = api_key
+        req = urllib.request.Request(f"{base_url.rstrip('/')}/messages",
+                                     data=json.dumps(body).encode(), headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+            blocks = json.loads(resp.read())["content"]
+        return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"

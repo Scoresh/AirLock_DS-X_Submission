@@ -1,6 +1,6 @@
 # Demo thesis (demo day)
 
-`demo-thesis.pdf` is a 12-page fictional sociology thesis, "Night Shift". It is what **Open sample document** loads.
+`demo-thesis.pdf` is a 12-page fictional sociology thesis, "Night Shift". Upload it on the home page to run a full local check end to end.
 Rebuild it with `cd backend && python scripts/make_demo_thesis.py`; check the format rules against it with `python scripts/validate_rules.py` (results in `docs/VALIDATION.md`).
 
 | Where | Planted | Expected |

@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app import review, rubric_check, scrub
 from app.main import app
 
-CONTACT = "Interview scheduling was handled by Maya Lindqvist (mlindq@bu.edu)."
+CONTACT = "Interview scheduling was handled by Danny Sab (ds1612@usnh.edu)."
 LOW_RISK = "Participant 5 is a first-year majoring in Planted Field: Epsilon who identifies as Planted group D."
 RUBRIC = {"rubric": [{"parameter_title": "Acknowledges helpers", "description": "Thanks the people who helped"}]}
 

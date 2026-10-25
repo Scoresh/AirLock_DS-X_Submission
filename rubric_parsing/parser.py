@@ -27,6 +27,7 @@ Extract the rubric below into this exact JSON shape:
 
 Rules:
 - One array entry per distinct grading criterion / parameter.
+- A **maximum** of three sentences per grading criterion / parameter.
 - "parameter_title": the short name of the criterion (string).
 - "description": what the criterion asks for; combine sub-bullets into one string.
 - "points": the numeric weight for that criterion. OMIT this key entirely if the
