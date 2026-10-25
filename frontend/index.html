@@ -13,7 +13,7 @@
   <header class="masthead">
     <div class="masthead__brand">
       <span class="wordmark">StrangerThesis</span>
-      <span class="masthead__desc">Local privacy checks before model review</span>
+      <span class="masthead__desc"></span>
     </div>
     <dl class="masthead__status" aria-live="polite">
       <div class="status-line">
@@ -25,6 +25,7 @@
         <dd id="status-model">Checking configuration</dd>
       </div>
     </dl>
+    <button type="button" id="open-settings" class="btn btn--quiet btn--small masthead__settings" aria-haspopup="dialog">Settings</button>
   </header>
 
   <main id="main">
@@ -77,12 +78,11 @@
     <section id="workspace" class="workspace" hidden aria-label="Workspace">
       <div class="toolbar">
         <div class="viewtabs" role="tablist" aria-label="Workspace sections">
-          <button type="button" role="tab" id="tab-document" class="viewtab" aria-selected="true" aria-controls="panel-document">Document</button>
-          <button type="button" role="tab" id="tab-privacy" class="viewtab" aria-selected="false" aria-controls="panel-privacy" tabindex="-1">Privacy check <span class="viewtab__count" id="count-privacy"></span></button>
-          <button type="button" role="tab" id="tab-review" class="viewtab" aria-selected="false" aria-controls="panel-review" tabindex="-1">Review <span class="viewtab__count" id="count-review"></span></button>
+          <button type="button" role="tab" id="tab-privacy" class="viewtab" aria-selected="true" aria-controls="panel-privacy">Privacy check <span class="viewtab__count" id="count-privacy"></span></button>
+          <button type="button" role="tab" id="tab-compare" class="viewtab" aria-selected="false" aria-controls="reader" tabindex="-1">Compare</button>
+          <button type="button" role="tab" id="tab-rubric" class="viewtab" aria-selected="false" aria-controls="panel-rubric" tabindex="-1">Rubric <span class="viewtab__count" id="count-rubric"></span></button>
         </div>
         <div class="toolbar__actions">
-          <button type="button" id="toggle-compare" class="btn btn--quiet" aria-pressed="false">Compare original and prepared text</button>
           <button type="button" id="new-doc" class="btn btn--quiet">New document</button>
         </div>
       </div>
@@ -124,13 +124,56 @@
         <aside class="inspector" id="inspector" aria-label="Findings">
           <p class="inspector__busy" id="busy" role="status" aria-live="polite"></p>
           <div id="work-error" class="notice notice--error" role="alert" hidden></div>
-          <div id="panel-document" role="tabpanel" aria-labelledby="tab-document" class="panel"></div>
-          <div id="panel-privacy" role="tabpanel" aria-labelledby="tab-privacy" class="panel" hidden></div>
-          <div id="panel-review" role="tabpanel" aria-labelledby="tab-review" class="panel" hidden></div>
+          <div id="panel-privacy" role="tabpanel" aria-labelledby="tab-privacy" class="panel"></div>
+          <div id="panel-rubric" role="tabpanel" aria-labelledby="tab-rubric" class="panel" hidden></div>
         </aside>
       </div>
     </section>
   </main>
+
+  <dialog id="settings-dialog" class="settings" aria-labelledby="settings-title">
+    <form method="dialog" class="settings__form" id="settings-form">
+      <div class="settings__head">
+        <h2 id="settings-title" class="settings__title">Review model settings</h2>
+        <button type="button" id="settings-close" class="btn btn--quiet btn--small" aria-label="Close settings">Close</button>
+      </div>
+      <p class="settings__intro">
+        Choose the model that reviews prepared text and rubric checks. Only tokenized,
+        gate-approved text is ever sent, and your API key stays on this machine (held
+        in memory by the local server, never written to disk or returned by the API).
+      </p>
+
+      <div class="settings__field">
+        <label for="settings-provider" class="label">Provider</label>
+        <select id="settings-provider" class="settings__input"></select>
+      </div>
+
+      <div class="settings__field">
+        <label for="settings-model" class="label">Model</label>
+        <select id="settings-model" class="settings__input"></select>
+        <input type="text" id="settings-model-custom" class="settings__input" placeholder="Model name" hidden>
+      </div>
+
+      <div class="settings__field" id="settings-baseurl-field" hidden>
+        <label for="settings-baseurl" class="label">Base URL</label>
+        <input type="url" id="settings-baseurl" class="settings__input" placeholder="http://localhost:11434/v1" autocomplete="off">
+      </div>
+
+      <div class="settings__field">
+        <label for="settings-key" class="label">API key</label>
+        <input type="password" id="settings-key" class="settings__input" autocomplete="off" placeholder="">
+        <p class="settings__hint" id="settings-key-hint"></p>
+      </div>
+
+      <div id="settings-feedback" class="notice" role="status" hidden></div>
+
+      <div class="settings__actions">
+        <button type="button" id="settings-save" class="btn btn--primary">Save</button>
+        <button type="button" id="settings-test" class="btn btn--secondary">Test connection</button>
+        <button type="button" id="settings-clear" class="btn btn--quiet">Clear</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="app.js"></script>
 </body>

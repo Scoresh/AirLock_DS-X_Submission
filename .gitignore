@@ -8,9 +8,7 @@ data/*
 __pycache__/
 .DS_Store
 .env
-
-
-libdump/pandoc.exe# virtual environments and their backups, server logs
+# virtual environments and their backups, server logs
 .venv*/
 backend/.venv*/
 *.log

@@ -1,0 +1,7 @@
+# Add native Anthropic Messages API support (proper Claude key handling)
+
+**Files changed:**
+- `rubric_parsing/llm.py`
+- `backend/app/settings.py`
+
+Fixed Claude support so it uses Anthropic's native Messages API instead of assuming an OpenAI-compatible shape. `rubric_parsing/llm.py` now carries an `api_style` ("openai" | "anthropic") on `LLMConfig`, read from a new `LLM_API_STYLE` env var (auto-detected from the base URL when unset), and `chat_json` routes accordingly. The Anthropic path posts to `/v1/messages` with the `x-api-key` header (not `Authorization: Bearer`), the required `anthropic-version: 2023-06-01` header, a required `max_tokens`, the system prompt as a top-level `system` field, and reads the reply from `content[].text`; the OpenAI/Gemini path (`/chat/completions`, Bearer auth, `response_format`) is unchanged. In `backend/app/settings.py`, each provider preset now declares its `api_style`, and `apply()` writes `LLM_API_STYLE` to the environment (Claude -> anthropic, OpenAI/Gemini -> openai, custom -> detected from the host), with `clear()` removing it too. Verified against stub servers that the Anthropic request uses the correct path, headers, and body shape and parses `content[].text`, that the OpenAI path still uses Bearer + `response_format`, and that `settings.apply` sets the right style per provider (including a custom Anthropic URL). This resolves the earlier 401s where an Anthropic key was sent to OpenAI or via the wrong auth header.

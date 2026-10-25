@@ -1,0 +1,6 @@
+# Trim LLM provider presets to two current models each
+
+**Files changed:**
+- `backend/app/settings.py`
+
+Audited the LLM API-key and external-request path end to end (`settings.py` → `os.environ` → `rubric_parsing/llm.py` → provider HTTP call) and confirmed each provider's contract matches its official API: OpenAI and Gemini use the OpenAI-compatible `/chat/completions` endpoint with `Authorization: Bearer`, and Claude correctly uses the native Anthropic Messages API (`/v1/messages`, `x-api-key`, `anthropic-version`, top-level `system`, `content[].text`). Confirmed the frontend (`app.js`/`index.html`) does not hardcode providers or models but renders whatever `/settings/providers` returns, so the backend is the single source of truth and no frontend edit was needed. Per the user's choice (Option A), trimmed each hosted provider's `models` list to exactly two broadly-available current models: OpenAI `gpt-4o`/`gpt-4o-mini` (default `gpt-4o`), Gemini `gemini-2.0-flash`/`gemini-1.5-pro` (default moved off the deprecated 1.5-flash to `gemini-2.0-flash`), and Claude `claude-3-5-sonnet-latest`/`claude-3-5-haiku-latest` (default `claude-3-5-haiku-latest`). Verified the module imports cleanly, every `default_model` is a member of its own `models` list, and `providers_public()` returns the trimmed lists with no secrets or `api_style` leaked to the UI.

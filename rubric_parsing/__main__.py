@@ -9,21 +9,21 @@ import argparse
 import json
 import sys
 
+from .extract import ExtractError
 from .llm import LLMConfigError, LLMRequestError
-from .pandoc import PandocError
 from .parser import parse_rubric_file
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="rubric_parsing", description=__doc__)
-    ap.add_argument("rubric_file", help="path to the rubric (docx, pdf, html, md, ...)")
+    ap.add_argument("rubric_file", help="path to the rubric (pdf, md, txt)")
     ap.add_argument("--out", help="write JSON here instead of stdout")
     ap.add_argument("--indent", type=int, default=2, help="JSON indent (default 2)")
     args = ap.parse_args(argv)
 
     try:
         rubric = parse_rubric_file(args.rubric_file)
-    except (FileNotFoundError, PandocError, LLMConfigError, LLMRequestError, ValueError) as exc:
+    except (FileNotFoundError, ExtractError, LLMConfigError, LLMRequestError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
