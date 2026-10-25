@@ -95,18 +95,21 @@ def main():
         if args.self_test:
             env['STRANGERTHESIS_KEYS_DIR'] = str(Path(temp)/'keys')
         with open(Path(temp)/'services.log','w+') as log:
+            # Hosted runtime diagnostics must reach Render rather than stay in a
+            # temporary file until a child crashes. Self-tests retain their log.
+            sink = None if args.hosted_demo and not args.self_test else log
             commands = [[args.node,'server.js'], [args.node,'bridge.js'], [args.node,'registrar.js']]
             try:
                 for command in commands:
                     child_env = dict(env, PORT=str(args.relay_port)) if command[1] == 'server.js' else env
-                    processes.append(subprocess.Popen(command,cwd=ROOT/'jiff',env=child_env,stdout=log,stderr=log))
+                    processes.append(subprocess.Popen(command,cwd=ROOT/'jiff',env=child_env,stdout=sink,stderr=sink))
                 processes.append(subprocess.Popen([sys.executable,'-m','uvicorn','app.main:app','--host',args.host,'--port',str(args.port)],
-                    cwd=ROOT/'backend',env=env,stdout=log,stderr=log))
+                    cwd=ROOT/'backend',env=env,stdout=sink,stderr=sink))
                 url = f'http://127.0.0.1:{args.port}'
                 names = ['JIFF relay', 'Researcher bridge', 'Registrar', 'FastAPI']
                 wait_for_services(list(zip(names, processes)), url, timeout=args.startup_timeout)
                 print('Hosted synthetic JIFF demo:' if args.hosted_demo else 'Integrated synthetic JIFF demo:',url,flush=True)
-                print('Select Secure population check · JIFF prototype, then Open sample document.',flush=True)
+                print('Select Private comparison (JIFF demo), then Open sample document.',flush=True)
                 if args.self_test:
                     with urllib.request.urlopen(url+'/sample?source=jiff') as response:
                         pdf = response.read()

@@ -28,7 +28,7 @@ def setup(monkeypatch, tmp_path):
     sent = []
     monkeypatch.setattr(review, '_send', lambda *args: sent.append(args[-1]) or '{"findings":[]}')
 
-    def fake_call(path, payload=None):
+    def fake_call(path, payload=None, **kwargs):
         if path == '/manifest':
             return {'fingerprint':population_check.digest(public)}
         batches.append(payload)
@@ -88,7 +88,7 @@ def test_high_risk_blocks_both_review_routes(setup):
 
 def test_failure_invalidates_previous_ready_score_and_never_falls_back(setup, monkeypatch):
     client,doc = ready(setup)
-    monkeypatch.setattr(population_check, 'call',lambda *a: (_ for _ in ()).throw(population_check.PopulationError('offline')))
+    monkeypatch.setattr(population_check, 'call',lambda *a,**kw: (_ for _ in ()).throw(population_check.PopulationError('offline')))
     assert score(client,doc).status_code == 503
     assert store.DOCS[doc].scored is None
     assert client.post('/review',json={'doc_id':doc}).status_code == 404
@@ -125,8 +125,8 @@ def test_rejects_mismatched_bridge_results(setup, monkeypatch, bad):
     client,doc,*_ = setup
     client.post(f'/scrub/{doc}?source=jiff')
     original = population_check.call
-    def corrupt(path,payload=None):
-        result = original(path,payload)
+    def corrupt(path,payload=None,**kwargs):
+        result = original(path,payload,**kwargs)
         result[bad] = [True] if bad == 'counts' else 'wrong'
         return result
     monkeypatch.setattr(population_check,'call',corrupt)

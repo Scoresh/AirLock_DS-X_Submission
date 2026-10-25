@@ -33,7 +33,7 @@ if (require.main === module) {
   const rows = JSON.parse(fs.readFileSync(process.env.JIFF_POPULATION, 'utf8'));
   startRegistrar({manifest:loadManifest(), rows, token:requireToken('JIFF_COORD_TOKEN'),
     relay:process.env.JIFF_RELAY_URL || 'http://127.0.0.1:9111',
-    onResult:counts => console.log('Completed authorized demo batch; counts:', counts.join(', '))});
+    onResult:counts => console.log('Completed authorized demo batch; comparisons:', counts.length)});
   console.log('Registrar ready. Population stays in this process.');
 }
 module.exports = {startRegistrar};
