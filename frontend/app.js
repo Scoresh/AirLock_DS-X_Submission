@@ -1561,6 +1561,16 @@ async function refreshPopulationSetup() {
   try {
     const status = await request(`/status?source=${state.populationSource}`);
     state.model = status.model;
+    const jiff = status.population_sources?.jiff;
+    const jiffOption = $("population-source").querySelector('option[value="jiff"]');
+    if (jiff) {
+      jiffOption.disabled = !jiff.available && state.populationSource !== "jiff";
+      jiffOption.textContent = jiff.available ? "Secure population check · JIFF prototype" : "Secure population check · not enabled";
+      if (!jiff.available && state.populationSource === "local") $("population-note").textContent += " JIFF is not enabled or ready on this deployment.";
+    }
+    const hosted = status.deployment_mode === "hosted-demo";
+    $("deployment-notice").hidden = !hosted;
+    if (hosted) $("deployment-notice").textContent = "Hosted demonstration: uploaded documents are processed on this server. The JIFF parties run on the same host using a small fictional population; this demonstrates the protocol, not an institutional Registrar connection. Use fictional or public documents.";
     state.setupBlocked = !status.setup?.ready;
     if (state.setupBlocked) {
       showIntakeError(status.setup.issues.join(" · "));

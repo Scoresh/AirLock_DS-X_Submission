@@ -4,6 +4,7 @@ Run from /backend:  uvicorn app.main:app --reload
 Docs:               http://127.0.0.1:8000/docs
 """
 import uuid
+import os
 import time
 from typing import Literal
 from pathlib import Path
@@ -190,7 +191,14 @@ def run_rubric_check(doc_id: str, req: RubricCheckRequest):
 @app.get("/status")
 def status(source: Literal["local", "jiff"] = "local"):
     """Which review model is configured, and whether local detection is fully installed."""
-    return {"model": review.model_config(), "setup": scrub.setup_status(source)}
+    jiff = population_check.availability()
+    setup = scrub.setup_status(source)
+    if source == "jiff" and not jiff["available"]:
+        setup["ready"] = False
+        setup["issues"] = [jiff["message"]]
+    return {"model": review.model_config(), "setup": setup,
+            "population_sources": {"jiff": jiff},
+            "deployment_mode": os.getenv("STRANGERTHESIS_DEPLOYMENT_MODE", "local")}
 
 
 CSV_TABLES: dict[str, bytes] = {}  # scrubbed CSVs kept in memory for download

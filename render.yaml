@@ -7,8 +7,9 @@ services:
     name: strangerthesis
     runtime: python
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: bash backend/scripts/render-build.sh
+    startCommand: python backend/scripts/run_jiff_demo.py --hosted-demo --host 0.0.0.0
+    healthCheckPath: /status
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.1
