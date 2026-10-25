@@ -16,10 +16,40 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def request(url, data=None, headers=None):
+def request(url, data=None, headers=None, timeout=70):
     raw = json.dumps(data).encode() if data is not None else None
-    with urllib.request.urlopen(urllib.request.Request(url, data=raw, headers=headers or {"Content-Type":"application/json"}), timeout=70) as response:
+    with urllib.request.urlopen(urllib.request.Request(url, data=raw, headers=headers or {"Content-Type":"application/json"}), timeout=timeout) as response:
         return json.load(response)
+
+
+def wait_for_services(processes, url, *, timeout=180, fetch=request,
+                      clock=time.monotonic, sleep=time.sleep, report=print):
+    """Wait by elapsed time, preserving the actual setup issue for deployment logs."""
+    deadline = clock() + timeout
+    last_reason = "FastAPI has not answered yet"
+    last_report = None
+    next_report = 0
+    while True:
+        for name, process in processes:
+            code = process.poll()
+            if code is not None:
+                raise RuntimeError(f"{name} exited during startup (exit code {code}); see service logs above")
+        remaining = deadline - clock()
+        if remaining <= 0:
+            raise RuntimeError(f"Services did not become ready within {timeout:g}s. Last readiness issue: {last_reason}")
+        try:
+            status = fetch(url + '/status?source=jiff', timeout=min(remaining, 70))
+            if status.get('setup', {}).get('ready'):
+                return status
+            last_reason = '; '.join(str(issue) for issue in status.get('setup', {}).get('issues', [])) or "Backend setup is not ready"
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as error:
+            # No credentials or headers are interpolated into startup diagnostics.
+            last_reason = f"FastAPI readiness request: {type(error).__name__}: {error}"
+        if last_reason != last_report or clock() >= next_report:
+            report("Waiting for services: " + last_reason, flush=True)
+            last_report = last_reason
+            next_report = clock() + 15
+        sleep(max(0, min(1, deadline - clock())))
 
 
 def main():
@@ -31,7 +61,10 @@ def main():
     parser.add_argument('--relay-port', type=int, default=9111)
     parser.add_argument('--bridge-port', type=int, default=9112)
     parser.add_argument('--self-test', action='store_true')
+    parser.add_argument('--startup-timeout', type=float, default=float(os.getenv('JIFF_STARTUP_TIMEOUT', '180')))
     args = parser.parse_args()
+    if not 1 <= args.startup_timeout <= 600:
+        parser.error('--startup-timeout must be between 1 and 600 seconds')
     if not args.node:
         parser.error('Node.js is required; pass --node /path/to/node')
     if args.host != '127.0.0.1' and not args.hosted_demo:
@@ -70,20 +103,8 @@ def main():
                 processes.append(subprocess.Popen([sys.executable,'-m','uvicorn','app.main:app','--host',args.host,'--port',str(args.port)],
                     cwd=ROOT/'backend',env=env,stdout=log,stderr=log))
                 url = f'http://127.0.0.1:{args.port}'
-                for attempt in range(100):
-                    if any(p.poll() is not None for p in processes):
-                        raise RuntimeError('A service exited during startup')
-                    try:
-                        status = request(url+'/status?source=jiff')
-                        request(env['JIFF_BRIDGE_URL']+'/manifest',headers={'Authorization':'Bearer '+env['JIFF_BRIDGE_TOKEN']})
-                        if not status['setup']['ready']:
-                            time.sleep(.2)
-                            continue
-                        break
-                    except (urllib.error.URLError, TimeoutError):
-                        time.sleep(.2)
-                else:
-                    raise RuntimeError('Services did not become ready')
+                names = ['JIFF relay', 'Researcher bridge', 'Registrar', 'FastAPI']
+                wait_for_services(list(zip(names, processes)), url, timeout=args.startup_timeout)
                 print('Hosted synthetic JIFF demo:' if args.hosted_demo else 'Integrated synthetic JIFF demo:',url,flush=True)
                 print('Select Secure population check · JIFF prototype, then Open sample document.',flush=True)
                 if args.self_test:
@@ -116,6 +137,8 @@ def main():
                 else:
                     while all(p.poll() is None for p in processes):
                         time.sleep(1)
+                    failures = ', '.join(f"{name}: exit {process.poll()}" for name, process in zip(names, processes) if process.poll() is not None)
+                    raise RuntimeError('A required service stopped: ' + failures)
             except KeyboardInterrupt:
                 pass
             except Exception:
