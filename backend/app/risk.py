@@ -7,13 +7,14 @@ for an identity group. Each row is one respondent and there are no weights, so
 
     k = number of respondents matching every detail of a participant's description.
 
-Quasi-identifiers and how each can be made vaguer (OMIT = drop the detail):
+Quasi-identifiers, value labels and generalization rules live in risk_config.json:
     MAJfirst        "Clockmaking: Theory"  -> MAJfirstfield "Clockmaking" -> OMIT
     MAJsecond       second major           -> MAJsecondfield              -> MAJnum "Double major"
     affiliation     lemur species          -> OMIT
     begincol        transferred in         -> OMIT
     Class           first-year / senior    (kept: already coarse)
 """
+import json
 import os
 import base64
 import gzip
@@ -35,20 +36,15 @@ _CANDIDATES = [os.getenv("NSSE_DATA_FILE"),
                "/etc/secrets/NSSE-synthetic.csv"]
 DATA_FILE = next((Path(p) for p in _CANDIDATES if p and Path(p).exists()), Path(_CANDIDATES[1]))
 
+CONFIG = json.loads((Path(__file__).with_name("risk_config.json")).read_text())
+QUASI = CONFIG["quasi_identifiers"]
+DERIVED = CONFIG["derived"]
+STEPS = {step["field"]: step for step in CONFIG["generalization"]}
+
 OMIT = ""
-LADDER = {
-    "MAJfirst": "MAJfirstfield",
-    "MAJfirstfield": OMIT,
-    "MAJsecond": "MAJsecondfield",
-    "MAJsecondfield": "MAJnum",
-    "affiliation": OMIT,
-    "begincol": OMIT,
-}
-OMITTED_TEXT = {"MAJfirstfield": "[major omitted]", "affiliation": "[affiliation omitted]",
-                "begincol": "[transfer history omitted]"}
-CLASS_LABEL = {"FY": "First-year", "SR": "Senior", "Other": "Other"}
-TRANSFERRED = "Started at another college"
-DOUBLE_MAJOR = "Double major"
+LADDER = {field: step["to"] or OMIT for field, step in STEPS.items()}  # field -> coarser field
+TRANSFERRED = QUASI["begincol"]["labels"]["1"]
+DOUBLE_MAJOR = QUASI["MAJnum"]["labels"]["2"]
 
 
 def risk_level(k: int) -> Risk:
@@ -63,6 +59,14 @@ def _field_of(major: pd.Series) -> pd.Series:
     return major.str.split(":").str[0].str.strip()
 
 
+def _label(raw: pd.Series, labels: dict[str, str] | None) -> pd.Series:
+    """Map raw codes (strings, or numbers stored as floats like 1.0) to readable labels."""
+    if not labels:
+        return raw
+    key = raw.map(lambda v: v if isinstance(v, str) or pd.isna(v) else str(int(v)))
+    return key.map(labels)
+
+
 @lru_cache(maxsize=1)
 def population() -> pd.DataFrame:
     if not DATA_FILE.exists():
@@ -73,17 +77,13 @@ def population() -> pd.DataFrame:
     raw = pd.read_csv(io.BytesIO(source), na_values=["#NULL!", " ", "-9"], low_memory=False)
     # Aggregated files (scripts/make_render_data.py) carry a count per combination in "n".
     weight = raw["n"] if "n" in raw.columns else pd.Series(1, index=raw.index)
-    return pd.DataFrame({
-        "n": weight,
-        "Class": raw["Class"].map(CLASS_LABEL),
-        "affiliation": raw["affiliation"],
-        "MAJfirst": raw["MAJfirst"],
-        "MAJfirstfield": _field_of(raw["MAJfirst"]),
-        "MAJsecond": raw["MAJsecond"],
-        "MAJsecondfield": _field_of(raw["MAJsecond"]),
-        "MAJnum": raw["MAJnum"].map({1: "Single major", 2: DOUBLE_MAJOR}),
-        "begincol": raw["begincol"].map({0: "Started here", 1: TRANSFERRED}),
-    })
+    df = pd.DataFrame({"n": weight})
+    for field, spec in QUASI.items():
+        df[field] = _label(raw[spec["column"]], spec.get("labels"))
+    for field, spec in DERIVED.items():
+        if spec["rule"] == "text_before_colon":
+            df[field] = _field_of(df[spec["from"]])
+    return df
 
 
 @lru_cache(maxsize=1)
@@ -99,12 +99,15 @@ def vocabulary() -> dict[str, list[str]]:
 
 def coarsen(field: str, value: str) -> tuple[str, str | None]:
     """One step up the ladder: (new field, new value); new field OMIT drops the detail."""
-    new_field = LADDER[field]
-    if new_field in ("MAJfirstfield", "MAJsecondfield"):
+    step = STEPS[field]
+    new_field = step["to"]
+    if not new_field:
+        return OMIT, None
+    if "value" in step:
+        return new_field, step["value"]
+    if DERIVED.get(new_field, {}).get("rule") == "text_before_colon":
         return new_field, value.split(":")[0].strip()
-    if new_field == "MAJnum":
-        return new_field, DOUBLE_MAJOR
-    return OMIT, None
+    raise ValueError(f"no rule to coarsen {field} -> {new_field}")
 
 
 def k_value(profile: dict[str, str]) -> int:
@@ -117,11 +120,10 @@ def k_value(profile: dict[str, str]) -> int:
 
 def phrase(field: str, new_field: str, value: str | None) -> str:
     """How the vaguer detail reads in the rewritten sentence."""
+    step = STEPS[field]
     if new_field == OMIT:
-        return OMITTED_TEXT[field]
-    if new_field == "MAJnum":
-        return "another field"
-    return value
+        return step["omitted_text"]
+    return step.get("text", value)
 
 
 def _generalize(profile: dict[str, str], mentions: dict[str, str], field: str) -> list[tuple[str, str]]:

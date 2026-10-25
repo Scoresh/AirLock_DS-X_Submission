@@ -1,0 +1,23 @@
+{
+  "_about": "Quasi-identifiers and generalization rules for the risk engine (risk.py). Column names are the organizers' NSSE synthetic data columns; see docs/DATA_SCHEMA.md. Change rules here, not in code.",
+  "quasi_identifiers": {
+    "Class": {"column": "Class", "labels": {"FY": "First-year", "SR": "Senior", "Other": "Other"}},
+    "affiliation": {"column": "affiliation"},
+    "MAJfirst": {"column": "MAJfirst"},
+    "MAJsecond": {"column": "MAJsecond"},
+    "MAJnum": {"column": "MAJnum", "labels": {"1": "Single major", "2": "Double major"}},
+    "begincol": {"column": "begincol", "labels": {"0": "Started here", "1": "Started at another college"}}
+  },
+  "derived": {
+    "MAJfirstfield": {"from": "MAJfirst", "rule": "text_before_colon"},
+    "MAJsecondfield": {"from": "MAJsecond", "rule": "text_before_colon"}
+  },
+  "generalization": [
+    {"field": "MAJfirst", "to": "MAJfirstfield", "explain": "major -> its field"},
+    {"field": "MAJfirstfield", "to": null, "omitted_text": "[major omitted]", "explain": "major field -> omitted"},
+    {"field": "MAJsecond", "to": "MAJsecondfield", "explain": "second major -> its field"},
+    {"field": "MAJsecondfield", "to": "MAJnum", "value": "Double major", "text": "another field", "explain": "second major field -> 'another field'"},
+    {"field": "affiliation", "to": null, "omitted_text": "[affiliation omitted]", "explain": "affiliation -> omitted"},
+    {"field": "begincol", "to": null, "omitted_text": "[transfer history omitted]", "explain": "transfer history -> omitted"}
+  ]
+}
