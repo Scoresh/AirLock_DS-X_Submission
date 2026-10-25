@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StrangerThesis · Secure population count</title>
+<style>
+*{box-sizing:border-box}body{max-width:900px;margin:48px auto;padding:0 24px;background:#f4f2ec;color:#282c29;font:16px/1.6 system-ui}h1,h2{font-family:Georgia,serif;font-weight:normal}h1{font-size:36px}label{display:block;margin-top:18px}input,select,textarea,button{font:inherit;padding:9px;border:1px solid #b8beb3;border-radius:4px}textarea{width:100%;font:13px/1.5 monospace;background:#fffefa}button{margin:18px 12px 0 0;background:#294d43;color:white;cursor:pointer}button:disabled{opacity:.5}output{display:block;border-top:1px solid #b8beb3;margin-top:24px;padding-top:20px}a{color:#294d43}small{display:block}input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid #aa7939}
+</style>
+<p>STRANGERTHESIS / EXPERIMENTAL JIFF DEMO</p><h1>Count matches. Keep inputs separate.</h1>
+<p>Open two windows: <a href="/?party=1">Researcher</a> and <a href="/?party=2">Registrar</a>. Use the same fresh session ID, public schema and row count. Only the final count is revealed.</p>
+<p><small>Local prototype: two non-colluding, honest parties and a trusted preprocessing server. Schema, population size and traffic metadata are public. Exact counts can leak information across repeated queries. No real registrar data is included.</small></p>
+<label>Role <select id="party"><option value="1">Researcher</option><option value="2">Registrar</option></select></label>
+<label>One-time session ID <input id="session" autocomplete="off" placeholder="Agree a fresh random ID"></label>
+<label>Public population row count <input id="count" type="number" min="1" max="64" value="8"></label>
+<label>Public category codebook (must match in both windows)<textarea id="schema" rows="8"></textarea></label>
+<label id="private-label" for="input">Your private input</label><textarea id="input" rows="12" spellcheck="false"></textarea>
+<small>Researcher: profile object; omit fields to generalize. Registrar: array of records, using this public schema. Local file loading does not upload the file.</small>
+<label>Load your private JSON file <input id="file" type="file" accept=".json,application/json"></label>
+<button id="sample">Load fictional example for this role</button><button id="run">Join secure count</button>
+<output id="status" aria-live="polite">Waiting for inputs.</output>
+<script src="/jiff-client.js"></script><script src="/protocol.js"></script><script src="/client.js"></script></html>
