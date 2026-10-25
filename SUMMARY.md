@@ -1,6 +1,6 @@
-# StrangerThesis — Summary
+# AirLock — Summary
 
-StrangerThesis is a local-first privacy firewall for documents you plan to submit online (theses, papers, grant applications, assignments). It scrubs identifying details on your own machine first, checks who in the document could be re-identified, and only lets the text leave your computer once that risk is acceptable.
+AirLock is a local-first privacy firewall for documents you plan to submit online (theses, papers, grant applications, assignments). It scrubs identifying details on your own machine first, checks who in the document could be re-identified, and only lets the text leave your computer once that risk is acceptable.
 
 ## How it works
 

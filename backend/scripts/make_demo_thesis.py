@@ -264,7 +264,7 @@ def build() -> None:
     assert rest >= 0, "title page does not fit"
     for spec in PAGES:
         _body_page(doc, spec)
-    doc.set_metadata({"title": "Night Shift (StrangerThesis demo document)", "author": "StrangerThesis demo"})
+    doc.set_metadata({"title": "Night Shift (AirLock demo document)", "author": "AirLock demo"})
     PDF_PATH.parent.mkdir(exist_ok=True)
     doc.save(PDF_PATH, garbage=3, deflate=True)
     print(f"wrote {PDF_PATH} ({len(doc)} pages)")

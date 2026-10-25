@@ -4,7 +4,7 @@
 # backend/scripts/make_render_data.py); Render mounts it at /etc/secrets/, where risk.py looks.
 services:
   - type: web
-    name: strangerthesis
+    name: airlock
     runtime: python
     plan: free
     buildCommand: bash backend/scripts/render-build.sh

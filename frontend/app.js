@@ -1,4 +1,4 @@
-/* StrangerThesis workspace.
+/* AirLock workspace.
    API (local FastAPI server):
      GET  /status                                    -> { model: { configured, model, endpoint } }
      GET  /sample                                    -> the test thesis PDF
@@ -1334,7 +1334,7 @@ function renderRubricWindow(win) {
   win.document.open();
   win.document.write(`<!doctype html><html lang="en"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rubric — StrangerThesis</title><style>${rubricWindowStyles()}</style></head>
+    <title>Rubric — AirLock</title><style>${rubricWindowStyles()}</style></head>
     <body>
       <div class="head">
         <h1>Rubric</h1>

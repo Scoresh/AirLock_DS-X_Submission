@@ -1,4 +1,4 @@
-"""StrangerThesis local API.  Owner: Dan.
+"""AirLock local API.  Owner: Dan.
 
 Run from /backend:  uvicorn app.main:app --reload
 Docs:               http://127.0.0.1:8000/docs
@@ -31,7 +31,7 @@ from .schemas import (
     SettingsUpdate,
 )
 
-app = FastAPI(title="StrangerThesis")
+app = FastAPI(title="AirLock")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -198,7 +198,7 @@ def status(source: Literal["local", "jiff"] = "local"):
         setup["issues"] = [jiff["message"]]
     return {"model": review.model_config(), "setup": setup,
             "population_sources": {"jiff": jiff},
-            "deployment_mode": os.getenv("STRANGERTHESIS_DEPLOYMENT_MODE", "local")}
+            "deployment_mode": os.getenv("AIRLOCK_DEPLOYMENT_MODE", "local")}
 
 
 CSV_TABLES: dict[str, bytes] = {}  # scrubbed CSVs kept in memory for download

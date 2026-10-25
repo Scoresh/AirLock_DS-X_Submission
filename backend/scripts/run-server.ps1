@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    StrangerThesis - run the backend server on Windows (PowerShell).
+    AirLock - run the backend server on Windows (PowerShell).
 
 .DESCRIPTION
     Creates/uses a local virtual environment, installs dependencies, downloads
@@ -20,7 +20,7 @@ $VenvDir    = Join-Path $BackendDir ".venv"
 $VenvPy     = Join-Path $VenvDir "Scripts\python.exe"
 $Requirements = Join-Path $BackendDir "requirements.txt"
 
-Write-Host "[StrangerThesis] Backend directory: $BackendDir"
+Write-Host "[AirLock] Backend directory: $BackendDir"
 
 # --- Pick a Python interpreter to build the venv with ------------------------
 # Prefer 3.13 (README note: 3.14 lacks a prebuilt pydantic-core wheel).
@@ -48,15 +48,15 @@ if (-not (Test-Path $VenvPy)) {
         Write-Error "No Python found. Install Python 3.13 from https://www.python.org/downloads/"
         exit 1
     }
-    Write-Host "[StrangerThesis] Creating virtual environment with: $($bootstrap.Exe) $($bootstrap.Args -join ' ')"
+    Write-Host "[AirLock] Creating virtual environment with: $($bootstrap.Exe) $($bootstrap.Args -join ' ')"
     & $bootstrap.Exe @($bootstrap.Args + @("-m", "venv", $VenvDir))
     if ($LASTEXITCODE -ne 0) { Write-Error "venv creation failed."; exit 1 }
 } else {
-    Write-Host "[StrangerThesis] Using existing virtual environment."
+    Write-Host "[AirLock] Using existing virtual environment."
 }
 
 # --- Install / update dependencies -------------------------------------------
-Write-Host "[StrangerThesis] Installing dependencies from requirements.txt ..."
+Write-Host "[AirLock] Installing dependencies from requirements.txt ..."
 & $VenvPy -m pip install --upgrade pip | Out-Null
 & $VenvPy -m pip install -r $Requirements
 if ($LASTEXITCODE -ne 0) { Write-Error "pip install failed."; exit 1 }
@@ -64,15 +64,15 @@ if ($LASTEXITCODE -ne 0) { Write-Error "pip install failed."; exit 1 }
 # --- Ensure the spaCy English model is present -------------------------------
 & $VenvPy -c "import spacy; spacy.load('en_core_web_sm')" *> $null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[StrangerThesis] Downloading spaCy model en_core_web_sm ..."
+    Write-Host "[AirLock] Downloading spaCy model en_core_web_sm ..."
     & $VenvPy -m spacy download en_core_web_sm
     if ($LASTEXITCODE -ne 0) { Write-Error "spaCy model download failed."; exit 1 }
 }
 
 # --- Launch the server -------------------------------------------------------
 Write-Host ""
-Write-Host "[StrangerThesis] Starting server at http://127.0.0.1:8000  (docs: /docs)"
-Write-Host "[StrangerThesis] Press Ctrl+C to stop."
+Write-Host "[AirLock] Starting server at http://127.0.0.1:8000  (docs: /docs)"
+Write-Host "[AirLock] Press Ctrl+C to stop."
 Write-Host ""
 Push-Location $BackendDir
 try {
