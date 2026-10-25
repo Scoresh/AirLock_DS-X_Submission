@@ -220,6 +220,7 @@ class RubricCheckResult(BaseModel):
     results: list[RubricCriterionResult]
     model_review: ModelReviewStatus = "not_configured"  # did the prepared text actually reach a model?
     model: str | None = None
+    model_error: str | None = None  # why the model request failed, if it did (same as ReviewResult)
 
 
 # ---------- 6. settings (LLM endpoint configuration) ----------

@@ -119,9 +119,18 @@ def run_rubric_check(doc_id: str, req: RubricCheckRequest):
     if not req.rubric:
         raise HTTPException(400, "rubric is empty: load a rubric JSON with at least one criterion")
     sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
-    results, status = rubric_check.check(sent, req.rubric)
-    return RubricCheckResult(doc_id=doc_id, results=results, model_review=status,
-                             model=rubric_check.model_config()["model"])
+    model = rubric_check.model_config()["model"]
+    try:
+        results, status = rubric_check.check(sent, req.rubric)
+    except (rubric_check.LLMRequestError, ValueError) as err:
+        # Same contract as /review: report the failure instead of a bare 500.
+        return RubricCheckResult(doc_id=doc_id, results=[], model_review="failed", model=model,
+                                 model_error=f"{type(err).__name__}: {err}"[:300])
+    # Tokens in the model's comments go back to the original words, on this machine only.
+    key = scrub.load_key(doc_id)
+    for r in results:
+        r.comment = review.TOKEN.sub(lambda m: key.get(m.group(0), m.group(0)), r.comment)
+    return RubricCheckResult(doc_id=doc_id, results=results, model_review=status, model=model)
 
 
 @app.get("/status")
