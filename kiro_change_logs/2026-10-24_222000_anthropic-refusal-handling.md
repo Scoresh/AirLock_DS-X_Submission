@@ -1,0 +1,6 @@
+# Handle Anthropic refusal responses with a clear error
+
+**Files changed:**
+- `rubric_parsing/llm.py`
+
+Checked our Anthropic Messages request/response handling against the current API request and response reference the user provided. Confirmed the request we send is compatible: our `Authorization: Bearer` auth, `anthropic-version` header (pinned `2023-06-01`, still valid), `max_tokens`, top-level `system` (string form is accepted alongside the array form in the reference), and `messages` all match, so no request changes were needed. The response `content[]` block shape we parse (`type`/`text`) is unchanged, but the reference shows a refusal case (`stop_reason: "refusal"` with a `stop_details.explanation`) that our parser previously surfaced only as a generic "no text content" error containing the full raw body. Updated `_chat_anthropic` so that when no usable text is returned and the response is a refusal, it raises `LLMRequestError` with Anthropic's own `explanation` instead of dumping the raw body. Verified against a localhost stub that a normal response still parses its text and that the pasted refusal body now raises "Anthropic declined the request: ..." with the policy explanation. No other request/response fields (citations, usage, container, diagnostics) are consumed, so they are safely ignored.

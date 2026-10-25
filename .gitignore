@@ -8,6 +8,3 @@ data/*
 __pycache__/
 .DS_Store
 .env
-
-
-libdump/pandoc.exe
