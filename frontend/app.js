@@ -115,6 +115,7 @@ function renderModelStatus() {
   if (!m) text = "Configuration unavailable";
   else if (state.review?.model_review === "sent") text = `Prepared text sent to ${state.review.model}`;
   else if (state.review?.model_review === "not_implemented") text = `${m.model} configured · model review not implemented, nothing sent`;
+  else if (state.review?.model_review === "failed") text = `${m.model} configured · review request failed`;
   else if (state.review) text = "Not configured · nothing was sent";
   else if (m.configured) text = `${m.model}${m.endpoint ? ` (${m.endpoint})` : ""} · nothing sent yet`;
   else text = "Not configured · nothing will be sent";
@@ -866,6 +867,7 @@ function annotationHtml(f, i) {
 function modelNote() {
   const r = state.review;
   if (r.model_review === "sent") return `Reviewed by <strong>${esc(r.model)}</strong>. Findings marked “Model review” came from it; tokens were restored on this machine.`;
+  if (r.model_review === "failed") return `The request to ${esc(r.model)} failed (${esc(r.model_error || "no detail")}). The prepared text may have reached the endpoint, but no findings came back. Only local rules are shown.`;
   if (r.model_review === "not_implemented") return `A model (${esc(r.model)}) is configured, but model review isn't implemented in this build yet. Nothing was sent; only local rules ran.`;
   return "Model review didn't run because no model is configured, so nothing was sent. Only local format rules ran. Set LLM_BASE_URL and LLM_MODEL on the server to enable it.";
 }

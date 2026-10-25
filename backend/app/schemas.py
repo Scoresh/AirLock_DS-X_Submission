@@ -138,7 +138,7 @@ class Finding(BaseModel):
                            # A quote that wraps across lines yields one box per line.
 
 
-ModelReviewStatus = Literal["not_configured", "not_implemented", "sent"]
+ModelReviewStatus = Literal["not_configured", "not_implemented", "sent", "failed"]
 
 
 class ReviewResult(BaseModel):
@@ -146,6 +146,7 @@ class ReviewResult(BaseModel):
     findings: list[Finding]
     model_review: ModelReviewStatus = "not_configured"  # did the prepared text actually reach a model?
     model: str | None = None
+    model_error: str | None = None  # why a model review failed, if it did
 
 
 class ReviewRequest(BaseModel):

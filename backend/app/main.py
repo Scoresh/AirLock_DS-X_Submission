@@ -63,10 +63,10 @@ def run_review(req: ReviewRequest):
         raise HTTPException(403, "privacy gate is closed: accept fixes for high-risk participants first")
     findings = format_rules.run_all(state.parsed)
     sent = risk.rewrite(state.scrubbed, state.accepted)  # only this text crosses the network
-    model_findings, status = review.llm_review(sent, req.rubric_text)
+    model_findings, status, error = review.llm_review(sent, req.rubric_text)
     findings += review.restore(model_findings, req.doc_id)
     return ReviewResult(doc_id=req.doc_id, findings=findings, model_review=status,
-                        model=review.model_config()["model"])
+                        model=review.model_config()["model"], model_error=error)
 
 
 @app.get("/status")
