@@ -103,7 +103,8 @@ def _analyzer():
         })
         return AnalyzerEngine(nlp_engine=provider.create_engine(), supported_languages=["en"])
     except Exception as err:  # spaCy raises OSError for a missing model; Presidio may wrap it
-        raise SetupError(f"The spaCy model en_core_web_sm is missing. {SETUP_HINT}") from err
+        detail = f"{type(err).__name__}: {err}"[:300]  # the real cause, not just "missing"
+        raise SetupError(f"The spaCy model en_core_web_sm could not be loaded ({detail}). {SETUP_HINT}") from err
 
 
 def setup_status() -> dict:
