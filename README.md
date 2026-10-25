@@ -52,7 +52,7 @@ Copy-Item "$HOME\Downloads\NSSE-synthetic.csv" ..\data\NSSE-synthetic.csv
 .venv\Scripts\python -m uvicorn app.main:app --reload
 ```
 
-Open http://127.0.0.1:8000 and click **Open sample document** for the demo thesis (`samples/demo-thesis.pdf`, described in `samples/README.md`). If anything required is missing, the page says what and how to fix it instead of running with partial checks.
+Open http://127.0.0.1:8000 and drop in a PDF to start a local check. For a ready-made demo, upload `samples/demo-thesis.pdf` (a fictional thesis, described in `samples/README.md`). If anything required is missing, the page says what and how to fix it instead of running with partial checks.
 
 **Review model (optional).** Set `LLM_BASE_URL` (for example `http://localhost:11434/v1` for Ollama), `LLM_MODEL` and, if needed, `LLM_API_KEY` before starting the server. Without them, only local rules run and nothing is sent.
 
