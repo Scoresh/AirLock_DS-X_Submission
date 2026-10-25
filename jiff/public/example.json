@@ -1,0 +1,18 @@
+{
+  "schema": {
+    "Class": ["First-year", "Senior", "Other"],
+    "MAJfirstfield": ["Clockmaking", "Tea Sciences", "Wayfinding"],
+    "affiliation": ["Indri", "Ring-tailed lemur"]
+  },
+  "profile": {"Class": "Senior", "MAJfirstfield": "Clockmaking", "affiliation": "Indri"},
+  "rows": [
+    {"Class":"Senior", "MAJfirstfield":"Clockmaking", "affiliation":"Indri"},
+    {"Class":"Senior", "MAJfirstfield":"Clockmaking", "affiliation":"Ring-tailed lemur"},
+    {"Class":"Senior", "MAJfirstfield":"Clockmaking", "affiliation":"Ring-tailed lemur"},
+    {"Class":"Senior", "MAJfirstfield":"Clockmaking", "affiliation":"Ring-tailed lemur"},
+    {"Class":"Senior", "MAJfirstfield":"Clockmaking", "affiliation":"Ring-tailed lemur"},
+    {"Class":"Senior", "MAJfirstfield":"Tea Sciences", "affiliation":"Indri"},
+    {"Class":"First-year", "MAJfirstfield":"Wayfinding", "affiliation":"Indri"},
+    {"Class":"Other", "MAJfirstfield":"Tea Sciences", "affiliation":"Ring-tailed lemur"}
+  ]
+}

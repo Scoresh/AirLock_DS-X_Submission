@@ -37,6 +37,7 @@ const RISK_TEXT = { high: "High risk", medium: "Medium risk", low: "Low risk" };
 const RISK_ORDER = { high: 0, medium: 1, low: 2 };
 
 const state = {
+  populationSource: "local",
   model: null,          // { configured, model, endpoint }
   file: null, isSample: false,
   parsed: null, scrubbed: null, scored: null, view: null, review: null,
@@ -61,11 +62,16 @@ async function request(path, { method = "GET", body, form } = {}) {
   try {
     res = await fetch(path, opts);
   } catch {
-    throw Object.assign(new Error("The local server isn't responding. Check that it is running, then try again."), { status: 0 });
+    throw Object.assign(new Error("We couldn’t reach the document checker. Please try again in a moment."), { status: 0 });
   }
   if (!res.ok) {
     let detail = res.statusText;
     try { detail = (await res.json()).detail || detail; } catch { /* not JSON */ }
+    if (state.scored && (path === "/score" || ((path === "/review" || path.startsWith("/rubric-check/")) && [403, 404, 503].includes(res.status)))) {
+      state.scored = { ...state.scored, gate_open: false, check_error: detail };
+      state.review = null;
+      state.rubricCheck = null;
+    }
     throw Object.assign(new Error(detail), { status: res.status });
   }
   return res.json();
@@ -117,21 +123,22 @@ function setLocalStatus(text) { $("status-local").textContent = text; }
 function renderModelStatus() {
   const m = state.model;
   let text;
-  if (!m) text = "Configuration unavailable";
+  if (!m) text = "Currently unavailable";
   else if (state.review?.model_review === "sent") text = `Prepared text sent to ${state.review.model}`;
   else if (state.review?.model_review === "not_implemented") text = `${m.model} configured · model review not implemented, nothing sent`;
   else if (state.review?.model_review === "failed") text = `${m.model} configured · review request failed`;
   // A review may have run earlier with no model. Don't leave the line stuck on
   // "Not configured" after the user swaps one in — reflect the current config.
   else if (m.configured) text = `${m.model}${m.endpoint ? ` (${m.endpoint})` : ""}`;
-  else if (state.review) text = "Not configured · nothing was sent";
-  else text = "Not configured · nothing will be sent";
+  else if (state.review) text = "Off · nothing sent to AI";
+  else text = "Off · add a reviewer in Settings";
   $("status-model").textContent = text;
 }
 
 /* ---------- intake ---------- */
-function showIntakeError(message) {
-  $("intake-error").innerHTML = `${esc(message)}`;
+function showIntakeError(message, details = "") {
+  $("intake-error").innerHTML = `${esc(message)}${details
+    ? `<details class="explain"><summary>Technical details</summary><p>${esc(details)}</p></details>` : ""}`;
   $("intake-error").hidden = false;
 }
 
@@ -169,9 +176,26 @@ $("upload-form").addEventListener("submit", (e) => {
   if (state.file) startCheck(state.file);
 });
 
+$("open-sample").addEventListener("click", async () => {
+  $("intake-error").hidden = true;
+  setIntakeBusy(true, "Loading sample document");
+  try {
+    const res = await fetch(`/sample?source=${state.populationSource}`);
+    if (!res.ok) throw new Error("The sample document isn't available on the local server.");
+    const blob = await res.blob();
+    const file = new File([blob], "demo-thesis.pdf", { type: "application/pdf" });
+    state.isSample = true;
+    await startCheck(file, true);
+  } catch (err) {
+    setIntakeBusy(false);
+    showIntakeError(err.message);
+  }
+});
+
 function setIntakeBusy(busy, step = "") {
   $("progress").textContent = busy ? step : "";
   $("start").disabled = busy || !state.file;
+  $("open-sample").disabled = busy;
   if (busy) setLocalStatus(step);
 }
 
@@ -180,19 +204,18 @@ async function startCheck(file, isSample = false) {
   state.isSample = isSample;
   $("intake-error").hidden = true;
   try {
-    setIntakeBusy(true, "Parsing PDF");
+    setIntakeBusy(true, "Reading your PDF");
     const form = new FormData();
     form.append("file", file, file.name);
     const [parsed, pdfDoc] = await Promise.all([request("/parse", { method: "POST", form }), openPdf(file)]);
     state.parsed = parsed;
     state.pdfDoc = pdfDoc;
 
-    setIntakeBusy(true, "Checking identifiers");
-    setLocalStatus("Checking identifiers");
-    state.scrubbed = await request(`/scrub/${parsed.doc_id}`, { method: "POST" });
+    setIntakeBusy(true, "Finding personal details");
+    setLocalStatus("Finding personal details");
+    state.scrubbed = await request(`/scrub/${parsed.doc_id}?source=${state.populationSource}`, { method: "POST" });
 
-    setIntakeBusy(true, "Estimating risk");
-    state.scored = await request("/score", { method: "POST", body: { doc_id: parsed.doc_id, accepted: [] } });
+    state.scored = await scoreDocument(parsed.doc_id, [], text => setIntakeBusy(true, text));
 
     setIntakeBusy(true, "Preparing comparison");
     state.view = await request(`/llm-view/${parsed.doc_id}`);
@@ -206,9 +229,28 @@ async function startCheck(file, isSample = false) {
     setIntakeBusy(false);
     setLocalStatus("Waiting for a document");
     const hint = err.status === 400
-      ? " Choose another PDF or a UTF-8 .txt file."
-      : err.status === 0 ? "" : " Try again.";
-    showIntakeError(`Couldn't check this document: ${err.message}.${hint}`);
+      ? " Choose another PDF, or open the sample document."
+      : "";
+    showIntakeError(`Couldn’t finish the privacy check: ${err.message.replace(/[.\s]+$/, "")}.${hint}`);
+  }
+}
+
+async function scoreDocument(docId, accepted, progress) {
+  const started = Date.now();
+  const secure = state.populationSource === "jiff";
+  function update() {
+    const seconds = Math.floor((Date.now() - started) / 1000);
+    const elapsed = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    progress(secure
+      ? `Comparing details privately · ${elapsed}. Larger checks may take a few minutes.`
+      : "Checking participant descriptions");
+  }
+  update();
+  const timer = secure ? setInterval(update, 5000) : null;
+  try {
+    return await request("/score", { method: "POST", body: { doc_id: docId, accepted } });
+  } finally {
+    if (timer !== null) clearInterval(timer);
   }
 }
 
@@ -226,7 +268,7 @@ $("csv-form").addEventListener("submit", async (e) => {
   $("csv-error").hidden = true;
   $("csv-result").hidden = true;
   $("csv-start").disabled = true;
-  $("csv-progress").textContent = "Scrubbing table on this machine";
+  $("csv-progress").textContent = "Checking your table’s privacy";
   try {
     const form = new FormData();
     form.append("file", f, f.name);
@@ -287,7 +329,7 @@ async function enterWorkspace() {
   const n = state.parsed.pages.length;
   $("file-title").textContent = state.isSample ? "Sample document" : state.file.name;
   $("file-meta").textContent = `${state.file.name} · ${plural(n, "page")} · ${fileSize(state.file.size)}`;
-  setLocalStatus(`Checked on this machine · ${plural(n, "page")}`);
+  setLocalStatus(`Privacy check complete · ${plural(n, "page")}`);
 
   const scored = state.scored.participants;
   const firstConcern = state.scrubbed.participants.find((p) => scoredById()[p.id]?.risk === "high");
@@ -445,7 +487,11 @@ function renderSidebar() {
   }).join("");
 
   const high = state.scored.participants.filter((p) => p.risk === "high");
-  $("gate-chip").innerHTML = state.scored.gate_open
+  $("gate-chip").innerHTML = state.scored.checking
+    ? `<span class="risk risk--high">Checking · review blocked</span>`
+    : state.scored.check_error
+    ? `<span class="risk risk--high">Incomplete · review blocked</span>`
+    : state.scored.gate_open
     ? `<span class="risk risk--ready">Ready for review</span>`
     : `<span class="risk risk--high">Blocked · ${plural(high.length, "high-risk participant")}</span>`;
 
@@ -751,6 +797,8 @@ function renderCompare() {
 /* ---------- inspector: privacy check ---------- */
 function gateHtml() {
   const s = state.scored;
+  if (s.checking) return `<div class="gate gate--blocked"><p class="gate__title">Privacy check in progress</p><p>The previous count no longer authorizes review. Waiting for the updated population check.</p></div>`;
+  if (s.check_error) return `<div class="gate gate--blocked"><p class="gate__title">Privacy check incomplete · review blocked</p><p>${esc(s.check_error)}</p><button class="btn btn--secondary" data-action="retry-population">Retry population check</button></div>`;
   const high = s.participants.filter((p) => p.risk === "high");
   const medium = s.participants.filter((p) => p.risk === "medium");
   if (!s.gate_open) {
@@ -789,7 +837,9 @@ function renderPrivacyPanel() {
 
   $("panel-privacy").innerHTML = `
     <h2 class="panel__title">Privacy check</h2>
-    <p class="panel__intro">Each described participant is compared with the organizers' NSSE synthetic data: 20,731 made-up respondents.
+    <p class="panel__intro">${state.scored.population_source === "jiff"
+      ? "Private comparison (JIFF demo). Estimates use fictional data."
+      : "Standard comparison. Estimates use sample data."}
       <strong>k</strong> is the estimated number of people who fit the same description: the smaller it is, the easier that person is to single out.</p>
     <details class="explain"><summary>How to read k</summary>
       <p>k of 1–4: high risk, blocks review. k of 5–19: medium, a narrow group. k of 20 or more: low.
@@ -804,7 +854,7 @@ function renderPrivacyPanel() {
 
     <section class="panel__section">
       <span class="label">Direct identifiers</span>
-      <p class="idsummary">${ids.length ? `<strong>${idText}</strong> replaced with tokens on this machine. The token key never leaves it.`
+      <p class="idsummary">${ids.length ? `<strong>${idText}</strong> replaced with placeholders. The key for restoring them is not sent to an AI reviewer.`
         : "No names, emails, phone numbers or student IDs were found."}</p>
     </section>
 
@@ -861,11 +911,14 @@ function focusParticipant(id) {
 }
 
 async function applyFixes(fixes) {
-  if (!fixes.length || state.busy) return;
+  if (state.busy) return;
   $("work-error").hidden = true;
-  setBusy("Estimating risk");
+  state.scored = {...state.scored, gate_open:false, checking:true, check_error:null};
+  state.review = null;
+  state.rubricCheck = null;
+  renderAll();
   try {
-    state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: fixes } });
+    state.scored = await scoreDocument(state.parsed.doc_id, fixes, setBusy);
     setBusy("Preparing comparison");
     state.view = await request(`/llm-view/${state.parsed.doc_id}`);
     setBusy("");
@@ -876,6 +929,10 @@ async function applyFixes(fixes) {
     maybeAutoFormatCheck();
   } catch (err) {
     setBusy("");
+    if (state.scored) {
+      state.scored = {...state.scored, gate_open:false, checking:false, check_error:err.message};
+      renderAll();
+    }
     showWorkError(err, () => applyFixes(fixes));
   }
 }
@@ -883,7 +940,9 @@ async function applyFixes(fixes) {
 $("inspector").addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t || t.disabled) return;
-  if (t.dataset.apply) {
+  if (t.dataset.action === "retry-population") {
+    applyFixes([]);
+  } else if (t.dataset.apply) {
     const [participant_id, field] = t.dataset.apply.split("|");
     state.focus = participant_id;
     applyFixes([{ participant_id, field }]);
@@ -1305,6 +1364,7 @@ async function runRubricCheck() {
       state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: [] } }).catch(() => state.scored);
       renderAll();
     }
+    if (state.scored) renderAll();
     showWorkError(err, () => runRubricCheck());
   }
 }
@@ -1325,6 +1385,7 @@ async function runReview() {
       state.scored = await request("/score", { method: "POST", body: { doc_id: state.parsed.doc_id, accepted: [] } }).catch(() => state.scored);
       renderAll();
     }
+    if (state.scored) renderAll();
     showWorkError(err, () => runReview());
   }
 }
@@ -1343,8 +1404,11 @@ async function maybeAutoFormatCheck() {
     });
     state.formatCheckedFor = state.parsed.doc_id;
     renderAll();
-  } catch {
-    // A failed auto-check is non-fatal; the privacy check still works. Stay quiet.
+  } catch (err) {
+    if (state.scored?.check_error) {
+      renderAll();
+      showWorkError(err, () => applyFixes([]));
+    }
   }
 }
 
@@ -1501,23 +1565,64 @@ $("settings-save").addEventListener("click", saveSettings);
 $("settings-test").addEventListener("click", testSettings);
 $("settings-clear").addEventListener("click", clearSettings);
 
-/* ---------- start ---------- */
-(async () => {
+/* ---------- source-aware setup ---------- */
+async function refreshPopulationSetup() {
+  state.populationSource = $("population-source").value;
+  state.setupBlocked = true;
+  $("start").disabled = true;
+  $("open-sample").disabled = true;
+  $("population-source").disabled = true;
+  $("population-source").setAttribute("aria-busy", "true");
+  $("population-retry").disabled = true;
+  $("population-retry").hidden = true;
+  $("population-note").textContent = state.populationSource === "jiff"
+    ? "Compare participant details without sending them in readable form to the data holder. This demo uses fictional data."
+    : "Compare participant details with a sample dataset to see how easily someone could stand out.";
   try {
-    const status = await request("/status");
+    setLocalStatus("Getting your privacy check ready");
+    const status = await request(`/status?source=${state.populationSource}`);
     state.model = status.model;
-    // A missing model or data file must stop the check, not silently find nothing.
-    if (status.setup && !status.setup.ready) {
-      setLocalStatus("Setup incomplete · checks can't run");
-      $("intake-error").innerHTML = `<strong>Local checks can't run on this machine yet.</strong>
-        <ul style="margin:6px 0 0 18px;list-style:disc">${status.setup.issues.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
-        <div class="notice__actions">Restart the server after fixing this, then reload the page.</div>`;
-      $("intake-error").hidden = false;
-      $("start").disabled = true;
-      state.setupBlocked = true;
+    const jiff = status.population_sources?.jiff;
+    const jiffOption = $("population-source").querySelector('option[value="jiff"]');
+    if (jiff) {
+      jiffOption.disabled = jiff.configured === false && state.populationSource !== "jiff";
+      jiffOption.textContent = jiff.available ? "Private comparison (JIFF demo)"
+        : jiff.configured ? "Private comparison · try again shortly" : "Private comparison · unavailable";
+      if (!jiff.available && state.populationSource === "jiff") {
+        $("population-note").textContent = jiff.configured
+          ? "The private comparison isn’t ready right now. Try again in a moment, or choose Standard comparison."
+          : "Private comparison isn’t available here. Please choose Standard comparison.";
+      }
+      $("population-retry").hidden = jiff.available || state.populationSource !== "jiff";
     }
-  } catch {
-    state.model = null;
+    const hosted = status.deployment_mode === "hosted-demo";
+    $("deployment-notice").hidden = !hosted;
+    $("upload-hint").textContent = hosted
+      ? "Your file will be checked on this website’s server."
+      : "Your file will be checked by the server running on your computer.";
+    state.setupBlocked = !status.setup?.ready;
+    if (state.setupBlocked) {
+      showIntakeError(state.populationSource === "jiff"
+        ? "The private comparison isn’t ready. Try again in a moment, or choose Standard comparison."
+        : "The standard comparison isn’t ready. Choose Private comparison if available, or try again later.",
+      status.setup.issues.join(" · "));
+      setLocalStatus("Check unavailable · try again or change the method");
+    } else {
+      $("intake-error").hidden = true;
+      setLocalStatus("Ready for a document");
+    }
+  } catch (err) {
+    showIntakeError(err.message);
+  } finally {
+    $("population-source").disabled = false;
+    $("population-source").setAttribute("aria-busy", "false");
+    $("population-retry").disabled = false;
+    if (state.setupBlocked) $("population-retry").hidden = false;
+    $("open-sample").disabled = state.setupBlocked;
+    $("start").disabled = state.setupBlocked || !state.file;
+    renderModelStatus();
   }
-  renderModelStatus();
-})();
+}
+$("population-source").addEventListener("change", refreshPopulationSetup);
+$("population-retry").addEventListener("click", refreshPopulationSetup);
+refreshPopulationSetup();

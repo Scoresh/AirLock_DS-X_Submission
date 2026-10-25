@@ -1,0 +1,5 @@
+# Fix hosted JIFF startup and source availability
+
+**Files changed:** `render.yaml`, `backend/scripts/{render-build.sh,run_jiff_demo.py}`, `backend/app/{main,population_check}.py`, `frontend/{app.js,index.html,styles.css}`, `tests/test_jiff_deployment.py`, `docs/JIFF_INTEGRATION.md`.
+
+The previous Render command started only FastAPI, so the hosted JIFF source had no manifest, bridge or Registrar. Added an explicit synthetic hosted-demo startup path that supplies the public manifest and temporary internal credentials, starts all required processes, preserves pandas secret-file configuration, and binds only FastAPI publicly. Updated the blueprint build to install locked Node dependencies as well as Python dependencies. Added source availability reporting and a human-readable unavailable state, plus a hosted-mode notice about server processing and co-located fictional-data parties. Added signal cleanup and startup retry handling. Verified 60 Python tests and the hosted-mode real HTTP/MPC self-test, and documented the required settings update for existing Render services.

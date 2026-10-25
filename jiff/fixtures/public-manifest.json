@@ -1,0 +1,40 @@
+{
+  "population_id": "fictional-registrar-demo",
+  "version": "1",
+  "row_count": 8,
+  "schema": {
+    "Class": [
+      "First-year",
+      "Senior",
+      "Other"
+    ],
+    "affiliation": [
+      "Indri",
+      "Ring-tailed lemur"
+    ],
+    "MAJfirst": [
+      "Clockmaking: Theory",
+      "Tea Sciences: Policy",
+      "Wayfinding: Studio"
+    ],
+    "MAJfirstfield": [
+      "Clockmaking",
+      "Tea Sciences",
+      "Wayfinding"
+    ],
+    "MAJsecond": [
+      "Tea Sciences: Policy"
+    ],
+    "MAJsecondfield": [
+      "Tea Sciences"
+    ],
+    "MAJnum": [
+      "Single major",
+      "Double major"
+    ],
+    "begincol": [
+      "Started here",
+      "Started at another college"
+    ]
+  }
+}

@@ -19,12 +19,15 @@ import os
 import base64
 import gzip
 import io
+from contextvars import ContextVar
 from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
 
 from .schemas import AcceptedFix, Risk, ScoredParticipant, ScoreResult, ScrubbedPage, ScrubResult, Suggestion
+
+VOCAB_SOURCE = ContextVar("vocab_source", default="local")
 
 HIGH_MAX_K = 4     # 1-4 blocks sending
 MEDIUM_MAX_K = 19  # 5-19 warns
@@ -87,7 +90,7 @@ def population() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
-def vocabulary() -> dict[str, list[str]]:
+def _local_vocabulary() -> dict[str, list[str]]:
     """Values the text rules can recognise, longest first so "Tea Sciences: Policy" beats "Tea Sciences"."""
     df = population()
     by_length = lambda values: sorted(set(values.dropna()), key=len, reverse=True)  # noqa: E731
@@ -95,6 +98,18 @@ def vocabulary() -> dict[str, list[str]]:
         "majors": by_length(pd.concat([df["MAJfirst"], df["MAJsecond"]])),
         "affiliations": by_length(df["affiliation"]),
     }
+
+
+def vocabulary() -> dict[str, list[str]]:
+    if VOCAB_SOURCE.get() == "jiff":
+        from .population_check import manifest
+        schema = manifest()["schema"]
+        return {"majors": sorted(set(schema.get("MAJfirst", []) + schema.get("MAJsecond", [])), key=len, reverse=True),
+                "affiliations": sorted(schema.get("affiliation", []), key=len, reverse=True)}
+    return _local_vocabulary()
+
+
+vocabulary.cache_clear = _local_vocabulary.cache_clear
 
 
 def coarsen(field: str, value: str) -> tuple[str, str | None]:
@@ -154,12 +169,13 @@ def _replay(scrubbed: ScrubResult, accepted: list[AcceptedFix]):
     return state
 
 
-def score(scrubbed: ScrubResult, accepted: list[AcceptedFix]) -> ScoreResult:
+def score(scrubbed: ScrubResult, accepted: list[AcceptedFix], counter=None) -> ScoreResult:
+    counter = counter or k_value
     replays = _replay(scrubbed, accepted)
     participants = []
     for p in scrubbed.participants:
         profile, mentions, _ = replays[p.id]
-        k = k_value(profile)
+        k = counter(profile)
         suggestions = []
         for field in [f for f in profile if f in LADDER]:
             trial = dict(profile)
@@ -171,7 +187,7 @@ def score(scrubbed: ScrubResult, accepted: list[AcceptedFix]) -> ScoreResult:
                 from_=profile[field],
                 to=new_value if new_field != OMIT else "omitted",
                 new_field=new_field,
-                new_k=k_value(trial),
+                new_k=counter(trial),
             ))
         suggestions.sort(key=lambda s: s.new_k, reverse=True)
         participants.append(ScoredParticipant(
@@ -186,6 +202,16 @@ def score(scrubbed: ScrubResult, accepted: list[AcceptedFix]) -> ScoreResult:
         participants=participants,
         gate_open=all(p.risk != "high" for p in participants),
     )
+
+
+def candidate_profiles(scrubbed: ScrubResult, accepted: list[AcceptedFix]) -> list[dict]:
+    profiles = []
+    def capture(profile):
+        if profile not in profiles:
+            profiles.append(dict(profile))
+        return 0
+    score(scrubbed, accepted, counter=capture)
+    return profiles
 
 
 def rewrite(scrubbed: ScrubResult, accepted: list[AcceptedFix]) -> ScrubResult:
