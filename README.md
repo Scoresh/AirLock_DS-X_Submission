@@ -143,4 +143,4 @@ Risk: k 1–4 high (blocks), 5–19 medium (warns), 20+ low.
 ## Team workflow
 
 - Work on a branch (`feature/<what>`), open a PR to `main`. Don't push to `main` directly.
-- After every code change, add a summary to `kiro_change_logs/` (see `.kiro/steering/change-logging.md`).
+- After every code change, please add a summary to `kiro_change_logs/` (see `.kiro/steering/change-logging.md`).
