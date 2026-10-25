@@ -5,6 +5,11 @@ PyMuPDF reads each page locally:
   - margins: distance from the page edges to the outermost text block
   - fonts: font name and size of every text span, with character counts
   - page label: a short number (arabic or roman) alone in the top or bottom band
+  - images: raster images embedded on the page (position, size, colorspace),
+    plus an `image_only` flag for pages that are a scan/figure with little or no
+    extractable text. This tells the rest of the pipeline that content may live
+    inside an image the text path can't see (a privacy-relevant blind spot). No
+    OCR is performed; this is metadata only, built so OCR can slot in later.
 
 Uploading nothing (the UI sends a placeholder) or a .txt file still works, so the
 pipeline can be tested without a real PDF.
@@ -15,17 +20,65 @@ from pathlib import Path
 
 import fitz  # PyMuPDF
 
-from .schemas import FontUse, Layout, Margins, Page, ParseResult
+from .schemas import BBox, FontUse, Layout, Margins, Page, PageImage, ParseResult
 
 PT_PER_IN = 72
 LABEL_BAND_IN = 0.9  # page numbers sit within this distance of the top or bottom edge
 PAGE_LABEL = re.compile(r"^(\d{1,4}|[ivxlcdm]{1,7})$", re.I)
+# A page with images but fewer than this many extractable text characters is
+# treated as image-only (likely a scan), so the pipeline knows the text path
+# almost certainly missed its content.
+IMAGE_ONLY_TEXT_CHARS = 20
 SAMPLE_PDF = Path(__file__).resolve().parents[2] / "samples" / "test-thesis.pdf"
 PLACEHOLDER = b"%PDF-mock"
 
 
 class ParseError(ValueError):
     """The upload is not a readable PDF or text file."""
+
+def _page_images(page: fitz.Page, area: fitz.Rect) -> list[PageImage]:
+    """Raster images placed on the page, with on-page position and pixel size.
+
+    Uses get_image_info(xrefs=True), which reports each *placement* (bbox in
+    points, stored pixel width/height, colorspace, and the image's xref). An
+    image reused on several pages appears once per placement, which is what we
+    want for a per-page view. Unreadable entries are skipped rather than failing
+    the whole parse.
+    """
+    page_area = area.width * area.height
+    images: list[PageImage] = []
+    try:
+        infos = page.get_image_info(xrefs=True)
+    except Exception:  # never fail parsing over image metadata
+        return images
+
+    for info in infos:
+        try:
+            bbox = fitz.Rect(info["bbox"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if bbox.is_empty or bbox.is_infinite:
+            continue
+        cs = info.get("colorspace")
+        # colorspace may be a name or a component count (1=gray, 3=rgb, 4=cmyk).
+        cs_name = None
+        if isinstance(cs, str):
+            cs_name = cs
+        elif isinstance(cs, int):
+            cs_name = {1: "DeviceGray", 3: "DeviceRGB", 4: "DeviceCMYK"}.get(cs)
+        coverage = (abs(bbox.get_area()) / page_area) if page_area else 0.0
+        images.append(
+            PageImage(
+                xref=int(info.get("xref", 0) or 0),
+                bbox=BBox(x0=round(bbox.x0, 2), y0=round(bbox.y0, 2),
+                          x1=round(bbox.x1, 2), y1=round(bbox.y1, 2)),
+                width_px=int(info.get("width", 0) or 0),
+                height_px=int(info.get("height", 0) or 0),
+                colorspace=cs_name,
+                page_coverage=round(min(max(coverage, 0.0), 1.0), 3),
+            )
+        )
+    return images
 
 
 def _label_position(rect: fitz.Rect, page: fitz.Rect) -> str:
@@ -75,9 +128,16 @@ def _parse_page(page: fitz.Page, number: int) -> Page:
         "\n".join("".join(s["text"] for s in line["spans"]) for line in block["lines"]).strip()
         for _, block in body
     )
+    images = _page_images(page, area)
+    # A page with image(s) but almost no extractable text is a scan/figure the
+    # text pipeline can't read: flag it so scrubbing/review don't treat an empty
+    # page as "nothing to check".
+    image_only = bool(images) and len(text.strip()) < IMAGE_ONLY_TEXT_CHARS
     return Page(
         page=number,
         text=text,
+        images=images,
+        image_only=image_only,
         layout=Layout(
             width_in=round(area.width / PT_PER_IN, 2),
             height_in=round(area.height / PT_PER_IN, 2),
@@ -99,6 +159,16 @@ def _parse_text(raw: bytes, doc_id: str) -> ParseResult:
     return ParseResult(doc_id=doc_id, pages=pages)
 
 
+def _result(doc_id: str, pages: list[Page]) -> ParseResult:
+    """Assemble the ParseResult and roll up the document-level image summary."""
+    return ParseResult(
+        doc_id=doc_id,
+        pages=pages,
+        has_images=any(p.images for p in pages),
+        image_only_pages=[p.page for p in pages if p.image_only],
+    )
+
+
 def parse_pdf(pdf_bytes: bytes, doc_id: str) -> ParseResult:
     if not pdf_bytes or pdf_bytes.startswith(PLACEHOLDER):
         pdf_bytes = SAMPLE_PDF.read_bytes()
@@ -114,4 +184,4 @@ def parse_pdf(pdf_bytes: bytes, doc_id: str) -> ParseResult:
         raise ParseError(f"could not read PDF: {err}") from err
     with doc:
         pages = [_parse_page(page, i) for i, page in enumerate(doc, start=1)]
-    return ParseResult(doc_id=doc_id, pages=pages)
+    return _result(doc_id, pages)
