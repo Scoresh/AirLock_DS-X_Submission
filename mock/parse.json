@@ -1,5 +1,7 @@
 {
   "doc_id": "demo",
+  "has_images": true,
+  "image_only_pages": [],
   "pages": [
     {
       "page": 1,
@@ -22,7 +24,9 @@
         ],
         "page_label": null,
         "page_label_position": null
-      }
+      },
+      "images": [],
+      "image_only": false
     },
     {
       "page": 2,
@@ -45,7 +49,9 @@
         ],
         "page_label": "1",
         "page_label_position": "bottom-center"
-      }
+      },
+      "images": [],
+      "image_only": false
     },
     {
       "page": 3,
@@ -68,7 +74,18 @@
         ],
         "page_label": "2",
         "page_label_position": "top-right"
-      }
+      },
+      "images": [
+        {
+          "xref": 42,
+          "bbox": { "x0": 108.0, "y0": 320.0, "x1": 504.0, "y1": 560.0 },
+          "width_px": 1100,
+          "height_px": 680,
+          "colorspace": "DeviceRGB",
+          "page_coverage": 0.133
+        }
+      ],
+      "image_only": false
     },
     {
       "page": 4,
@@ -91,7 +108,9 @@
         ],
         "page_label": "3",
         "page_label_position": "bottom-center"
-      }
+      },
+      "images": [],
+      "image_only": false
     }
   ]
 }

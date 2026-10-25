@@ -1,0 +1,10 @@
+# Implement image extraction from PDFs in the parser
+
+**Files changed:**
+- `backend/app/schemas.py`
+- `backend/app/parse.py`
+- `frontend/app.js`
+- `frontend/styles.css`
+- `mock/parse.json`
+
+Added local, OCR-free image awareness to the PDF parser so the pipeline knows when content lives inside an image the text path can't read — a privacy-relevant blind spot, since a scan or embedded figure can carry PII the scrubber never sees. In `schemas.py`, promoted `BBox` to a shared geometry type, added a `PageImage` model (xref, on-page bbox in points, pixel size, colorspace, page_coverage), added `Page.images`/`Page.image_only`, and added `ParseResult.has_images`/`image_only_pages`; all new fields default empty so the contract stays backward-compatible. In `parse.py`, added `_page_images` using PyMuPDF's `get_image_info(xrefs=True)` to capture each image placement (mapping component-count colorspaces to names, skipping empty/unreadable entries and never failing the parse over image metadata), set `image_only` when a page has images but under 20 characters of extractable text, and rolled up the document summary via a new `_result` helper. On the frontend, the page detail panel now shows an "Images" row and, for image-only pages, an amber warning that the local privacy check cannot read the page and its contents are not scrubbed; added a `.notice--warning` style using the existing ochre tokens. Updated `mock/parse.json` to the new shape (document summary plus a sample figure on page 3) per the contract-change rule. Verified end to end: built an in-memory 3-page PDF (text / text+image / image-only) and confirmed correct images, bboxes, pixel sizes, colorspaces, coverage, the `image_only` flag, and the `[3]` summary; confirmed the existing text sample still parses with the new fields defaulting correctly; validated the updated mock against the schema; confirmed all backend modules import; and bundled `frontend/app.js` cleanly with bun. No OCR dependency was added; the design leaves room to slot OCR in behind the same contract later.

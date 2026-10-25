@@ -1,4 +1,4 @@
-"""Orchestrator: rubric file -> Markdown (pandoc) -> LLM -> validated JSON.
+"""Orchestrator: rubric file -> text -> LLM -> validated JSON.
 
 Because no two rubrics share a layout, an LLM does the structural extraction.
 This module only sends the rubric text (grading criteria the user supplies);
@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from . import pandoc
+from . import extract
 from .llm import LLMConfig, LLMRequestError, chat_json
 from .schemas import Rubric
 
@@ -99,6 +99,6 @@ def parse_rubric_text(rubric_text: str, config: LLMConfig | None = None) -> Rubr
 
 
 def parse_rubric_file(path: str | Path, config: LLMConfig | None = None) -> Rubric:
-    """Full pipeline: convert a rubric file with pandoc, then parse via LLM."""
-    text = pandoc.to_markdown(path)
+    """Full pipeline: extract text from a rubric file, then parse via LLM."""
+    text = extract.to_text(path)
     return parse_rubric_text(text, config=config)
