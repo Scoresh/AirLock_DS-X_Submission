@@ -32,7 +32,7 @@ import urllib.request
 from dataclasses import dataclass
 
 ANTHROPIC_VERSION = "2026-10-21"
-ANTHROPIC_MAX_TOKENS = 4096
+ANTHROPIC_MAX_TOKENS = 8192
 
 
 class LLMConfigError(RuntimeError):
