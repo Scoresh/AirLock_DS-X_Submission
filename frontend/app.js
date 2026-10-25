@@ -169,6 +169,7 @@ $("upload-form").addEventListener("submit", (e) => {
   if (state.file) startCheck(state.file);
 });
 
+<<<<<<< Updated upstream
 $("open-sample").addEventListener("click", async () => {
   $("intake-error").hidden = true;
   setIntakeBusy(true, "Loading sample document");
@@ -185,10 +186,11 @@ $("open-sample").addEventListener("click", async () => {
   }
 });
 
+=======
+>>>>>>> Stashed changes
 function setIntakeBusy(busy, step = "") {
   $("progress").textContent = busy ? step : "";
   $("start").disabled = busy || !state.file;
-  $("open-sample").disabled = busy;
   if (busy) setLocalStatus(step);
 }
 
@@ -1530,7 +1532,7 @@ $("settings-clear").addEventListener("click", clearSettings);
         <ul style="margin:6px 0 0 18px;list-style:disc">${status.setup.issues.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
         <div class="notice__actions">Restart the server after fixing this, then reload the page.</div>`;
       $("intake-error").hidden = false;
-      $("open-sample").disabled = true;
+      $("start").disabled = true;
       state.setupBlocked = true;
     }
   } catch {
