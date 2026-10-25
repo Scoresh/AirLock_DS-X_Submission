@@ -310,16 +310,18 @@ async function enterWorkspace() {
   const firstConcern = state.scrubbed.participants.find((p) => scoredById()[p.id]?.risk === "high");
   state.page = firstConcern ? firstConcern.pages[0] : 1;
 
-  // Navigation and findings first; page images can take a moment to draw.
+  // Navigation and findings first. Page images draw in the background and never
+  // disable controls: the privacy check does not depend on them.
   $("doc-view").innerHTML = "";
   renderAll();
   selectTab("privacy");
-  setBusy("Drawing pages");
-  await renderDocument();
-  setBusy("");
-  renderAll();
-  selectPage(state.page, { scroll: true });
   maybeAutoFormatCheck();
+  const page = state.page;
+  renderDocument().then((finished) => {
+    if (!finished) return;  // a newer document replaced this one
+    renderOverlays();
+    if (state.page === page) selectPage(page, { scroll: true });
+  });
 }
 
 function renderAll() {
@@ -359,6 +361,8 @@ function showWorkError(err, retry) {
 }
 
 function resetToIntake() {
+  state.drawId = (state.drawId || 0) + 1;  // stop any page drawing still in progress
+  setReaderNote("");
   Object.assign(state, { parsed: null, scrubbed: null, scored: null, view: null, review: null, pdfDoc: null });
   $("workspace").hidden = true;
   $("intake").hidden = false;
@@ -495,14 +499,33 @@ function selectPage(n, { scroll = false, highlight = null } = {}) {
 }
 
 /* ---------- reader: PDF pages ---------- */
+const PAGE_DRAW_TIMEOUT_MS = 8000;  // a stalled page switches the rest to extracted text
+
+function withTimeout(promise, ms) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("timeout")), ms);
+  })]).finally(() => clearTimeout(timer));
+}
+
+function setReaderNote(text) {
+  $("reader-note").hidden = !text;
+  $("reader-note").textContent = text || "";
+}
+
+/* Returns true when every page is placed, false if a newer document took over. */
 async function renderDocument() {
+  const drawId = (state.drawId = (state.drawId || 0) + 1);
+  const pdfDoc = state.pdfDoc;
+  const total = state.parsed.pages.length;
   const view = $("doc-view");
   view.innerHTML = "";
-  $("reader-note").hidden = Boolean(state.pdfDoc);
-  $("reader-note").textContent = state.pdfDoc ? "" :
-    "Page images couldn't be drawn because PDF.js didn't load. Showing the text extracted on this machine instead.";
+  let useImages = Boolean(pdfDoc);
+  setReaderNote(useImages ? `Drawing page images · 0 of ${total}` :
+    "Page images couldn't be drawn because PDF.js didn't load. Showing the text extracted on this machine instead.");
 
   for (const { page: n, text, layout } of state.parsed.pages) {
+    if (drawId !== state.drawId) return false;
     const sheet = document.createElement("figure");
     sheet.className = "sheet";
     sheet.id = `sheet-${n}`;
@@ -513,31 +536,47 @@ async function renderDocument() {
     view.appendChild(sheet);
     const pageEl = sheet.querySelector(".sheet__page");
 
-    if (state.pdfDoc && n <= state.pdfDoc.numPages) {
-      const page = await state.pdfDoc.getPage(n);
-      const base = page.getViewport({ scale: 1 });
-      const scale = (720 * Math.min(window.devicePixelRatio || 1, 2)) / base.width;
-      const viewport = page.getViewport({ scale });
-      const canvas = document.createElement("canvas");
-      canvas.className = "sheet__canvas";
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", `Page ${n} of the uploaded document`);
-      pageEl.appendChild(canvas);
-      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-      state.pageGeom[n] = { w: base.width, h: base.height };
-      state.textItems[n] = (await page.getTextContent()).items.map((it) => {
-        const h = it.height || Math.hypot(it.transform[2], it.transform[3]);
-        const [x0, y0] = base.convertToViewportPoint(it.transform[4], it.transform[5] + h);
-        const [x1, y1] = base.convertToViewportPoint(it.transform[4] + it.width, it.transform[5] - h * 0.22);
-        return { str: it.str, x0, y0, x1, y1 };
-      });
-    } else {
-      pageEl.insertAdjacentHTML("beforeend", `<div class="sheet__text">${esc(text)}</div>`);
-      state.pageGeom[n] = { w: layout.width_in * 72, h: layout.height_in * 72 };
+    if (useImages && n <= pdfDoc.numPages) {
+      try {
+        await withTimeout(drawPage(pdfDoc, n, pageEl), PAGE_DRAW_TIMEOUT_MS);
+        if (drawId !== state.drawId) return false;
+        setReaderNote(n < total ? `Drawing page images · ${n} of ${total}` : "");
+        renderOverlays();
+        continue;
+      } catch {
+        if (drawId !== state.drawId) return false;
+        useImages = false;  // slow or failed: show text for this and the remaining pages
+        pageEl.querySelector(".sheet__canvas")?.remove();
+        setReaderNote("Page images were taking too long, so the remaining pages show the text extracted on this machine.");
+      }
     }
+    pageEl.insertAdjacentHTML("beforeend", `<div class="sheet__text">${esc(text)}</div>`);
+    state.pageGeom[n] = { w: layout.width_in * 72, h: layout.height_in * 72 };
   }
+  if (useImages) setReaderNote("");
+  return drawId === state.drawId;
+}
+
+async function drawPage(pdfDoc, n, pageEl) {
+  const page = await pdfDoc.getPage(n);
+  const base = page.getViewport({ scale: 1 });
+  const scale = (720 * Math.min(window.devicePixelRatio || 1, 2)) / base.width;
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.className = "sheet__canvas";
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  canvas.setAttribute("role", "img");
+  canvas.setAttribute("aria-label", `Page ${n} of the uploaded document`);
+  pageEl.appendChild(canvas);
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  state.pageGeom[n] = { w: base.width, h: base.height };
+  state.textItems[n] = (await page.getTextContent()).items.map((it) => {
+    const h = it.height || Math.hypot(it.transform[2], it.transform[3]);
+    const [x0, y0] = base.convertToViewportPoint(it.transform[4], it.transform[5] + h);
+    const [x1, y1] = base.convertToViewportPoint(it.transform[4] + it.width, it.transform[5] - h * 0.22);
+    return { str: it.str, x0, y0, x1, y1 };
+  });
 }
 
 /* Find a phrase in the PDF's text items and return boxes in page points. Approximate within a line. */
