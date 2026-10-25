@@ -14,9 +14,9 @@ Planted privacy problems
       P7  first-year, Diademed sifaka, Lighthouse Engineering: Methods           k = 1   high
       P9  senior, Aye-aye, Wayfinding: Studio, transfer student                  k = 1   high
 
-Planted format problems
-  No abstract page; left margin 0.75 in on p. 4; page number top-right on p. 5;
-  Appendix B set in Helvetica 11 instead of Times 12.
+Planted format problems (each maps to a rule in app/format_rules.py)
+  No abstract page; Roman numeral "iii" at bottom right; left margin 0.75 in on the Findings page;
+  page number top-right on page "5"; Appendix B set in Helvetica 11 instead of Times 12.
 
 Run from /backend:  python scripts/make_demo_thesis.py
 """
@@ -29,7 +29,7 @@ PDF_PATH = ROOT / "samples" / "demo-thesis.pdf"
 
 PT = 72
 W, H = 8.5 * PT, 11 * PT
-NORMAL = {"top": 1.0, "bottom": 1.0, "left": 1.5, "right": 1.0}
+NORMAL = {"top": 1.5, "bottom": 1.0, "left": 1.5, "right": 1.0}
 
 TITLE_PAGE = """NIGHT SHIFT:
 HOW UNDERGRADUATES CHOOSE WHERE TO STUDY AFTER DARK
@@ -72,7 +72,7 @@ PAGES = [
     },
     {
         "heading": "Table of Contents",
-        "label": "iii",
+        "label": ("iii", "bottom-right"),  # planted: Roman numeral not at bottom center
         "body": [
             "Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ii\n"
             "Chapter 1. Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . 1\n"
@@ -140,7 +140,7 @@ PAGES = [
     {
         "heading": "Chapter 3. Findings",
         "label": "4",
-        "margins": {"top": 1.0, "bottom": 1.0, "left": 0.75, "right": 1.0},  # planted: left margin
+        "margins": {"top": 1.5, "bottom": 1.0, "left": 0.75, "right": 1.0},  # planted: left margin
         "body": [
             "Three themes organise the findings: the search for quiet without isolation, the role of "
             "lighting and building access in feeling safe, and the way late-night study doubles as a "
@@ -234,6 +234,8 @@ def _label(page: fitz.Page, label, font: str, size: float) -> None:
     text, where = label if isinstance(label, tuple) else (label, "bottom-center")
     if where == "top-right":
         page.insert_text(fitz.Point(W - 1.0 * PT - 10, 0.6 * PT), text, fontname=font, fontsize=size)
+    elif where == "bottom-right":
+        page.insert_text(fitz.Point(W - 1.0 * PT - 10, H - 0.5 * PT), text, fontname=font, fontsize=size)
     else:
         page.insert_text(fitz.Point(W / 2 - 3 * len(text), H - 0.5 * PT), text, fontname=font, fontsize=size)
 
