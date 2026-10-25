@@ -130,6 +130,19 @@ button, input { font: inherit; color: inherit; }
 .method__where { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--green); }
 .method__where--model { color: var(--slate); }
 
+/* ---------- CSV mode ---------- */
+.csvmode { margin-top: 48px; padding-top: 28px; border-top: 1px solid var(--rule); }
+.csvmode__title { font-family: var(--serif); font-size: 20px; font-weight: 600; }
+.csvmode__lede { margin-top: 8px; color: var(--text-2); font-size: 14px; }
+.csvmode__form { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 14px; }
+.csvreport { margin-top: 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 16px 18px; }
+.csvreport table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.csvreport th, .csvreport td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+.csvreport th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); font-weight: 600; }
+.csvreport__roles { margin-top: 10px; font-size: 13px; color: var(--text-2); }
+.csvreport__roles strong { color: var(--text); }
+.csvreport .btn { margin-top: 14px; }
+
 /* ---------- notices ---------- */
 .notice { margin-top: 16px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 14px; border-left: 3px solid; }
 .notice--error { background: var(--brick-tint); border-color: var(--brick); }

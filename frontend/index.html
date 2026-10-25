@@ -58,6 +58,19 @@
         <li><span class="method__where">Local</span><span>Apply suggested rewrites until no participant is above the high-risk threshold.</span></li>
         <li><span class="method__where method__where--model">Model</span><span>Send the prepared text for rubric review, if a model is configured. Format rules run locally either way.</span></li>
       </ol>
+
+      <section class="csvmode" aria-labelledby="csv-title">
+        <h2 id="csv-title" class="csvmode__title">Working with a data table instead?</h2>
+        <p class="csvmode__lede">Upload a CSV. Identifier columns become tokens, identifying columns are generalized,
+          and you get the re-identification risk before and after. Everything runs on this machine.</p>
+        <form id="csv-form" class="csvmode__form" novalidate>
+          <input type="file" id="csv-file" accept=".csv,text/csv">
+          <button type="submit" id="csv-start" class="btn btn--secondary" disabled>Scrub table</button>
+        </form>
+        <p id="csv-progress" class="progress" role="status" aria-live="polite"></p>
+        <div id="csv-error" class="notice notice--error" role="alert" hidden></div>
+        <div id="csv-result" hidden></div>
+      </section>
     </section>
 
     <!-- After upload -->

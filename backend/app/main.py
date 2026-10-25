@@ -7,11 +7,11 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from . import format_rules, review, risk, scrub, store
+from . import csv_mode, format_rules, review, risk, scrub, store
 from .parse import ParseError, parse_pdf
 from .schemas import ParseResult, ReviewRequest, ReviewResult, ScoreRequest, ScoreResult, ScrubResult
 
@@ -73,6 +73,29 @@ def run_review(req: ReviewRequest):
 def status():
     """Which review model is configured, and whether local detection is fully installed."""
     return {"model": review.model_config(), "setup": scrub.setup_status()}
+
+
+CSV_TABLES: dict[str, bytes] = {}  # scrubbed CSVs kept in memory for download
+
+
+@app.post("/csv/scrub")
+async def csv_scrub(file: UploadFile = File(...)):
+    """Scrub an uploaded data table locally; returns column roles and the k distribution before and after."""
+    table_id = uuid.uuid4().hex[:8]
+    try:
+        scrubbed, report = csv_mode.scrub_table(await file.read(), table_id)
+    except (ValueError, UnicodeDecodeError) as err:
+        raise HTTPException(400, f"could not read this CSV: {err}") from err
+    CSV_TABLES[table_id] = scrubbed.to_csv(index=False).encode()
+    return report | {"download": f"/csv/{table_id}/download"}
+
+
+@app.get("/csv/{table_id}/download")
+def csv_download(table_id: str):
+    if table_id not in CSV_TABLES:
+        raise HTTPException(404, "this scrubbed table is no longer on the local server")
+    return Response(CSV_TABLES[table_id], media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="scrubbed-{table_id}.csv"'})
 
 
 SAMPLE_PDF = Path(__file__).resolve().parents[2] / "samples" / "demo-thesis.pdf"  # see scripts/make_demo_thesis.py

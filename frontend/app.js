@@ -220,6 +220,57 @@ async function startCheck(file, isSample = false) {
   }
 }
 
+/* ---------- CSV mode ---------- */
+$("csv-file").addEventListener("change", () => {
+  $("csv-error").hidden = true;
+  const f = $("csv-file").files[0];
+  $("csv-start").disabled = !f;
+});
+
+$("csv-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = $("csv-file").files[0];
+  if (!f) return;
+  $("csv-error").hidden = true;
+  $("csv-result").hidden = true;
+  $("csv-start").disabled = true;
+  $("csv-progress").textContent = "Scrubbing table on this machine";
+  try {
+    const form = new FormData();
+    form.append("file", f, f.name);
+    renderCsvReport(await request("/csv/scrub", { method: "POST", form }), f.name);
+  } catch (err) {
+    $("csv-error").textContent = `Couldn't scrub this table: ${err.message}. Check that it is a comma-separated file with a header row.`;
+    $("csv-error").hidden = false;
+  } finally {
+    $("csv-progress").textContent = "";
+    $("csv-start").disabled = false;
+  }
+});
+
+function renderCsvReport(r, name) {
+  const byRole = {};
+  r.columns.forEach((c) => (byRole[c.role] ||= []).push(c.rule ? `${c.name} (${c.rule.replaceAll("_", " ")})` : c.name));
+  const pct = (v) => `${((v / r.rows) * 100).toFixed(1)}%`;
+  const bins = Object.keys(r.k_before.bins);
+  const roleLine = (role, label) => byRole[role] ? `<p><strong>${esc(label)}:</strong> ${esc(byRole[role].join(", "))}</p>` : "";
+  $("csv-result").innerHTML = `<div class="csvreport">
+      <p class="label">${esc(name)} · <span class="num">${r.rows.toLocaleString()}</span> rows</p>
+      <div class="csvreport__roles">
+        ${roleLine("direct identifier", "Replaced with tokens")}
+        ${roleLine("quasi-identifier", "Generalized")}
+        <p><strong>Kept as is:</strong> ${(byRole["kept"] || []).length + (byRole["quasi-identifier (kept)"] || []).length} columns</p>
+      </div>
+      <table aria-label="Re-identification risk before and after">
+        <thead><tr><th>Estimated k</th><th>Before</th><th>After</th></tr></thead>
+        <tbody>${bins.map((b) => `<tr><td>${esc(b)}</td><td>${pct(r.k_before.bins[b])}</td><td>${pct(r.k_after.bins[b])}</td></tr>`).join("")}</tbody>
+      </table>
+      <p class="csvreport__roles">k is computed on ${esc(r.k_after.columns.join(", ") || "no recognised columns")}. The token key stays on this machine.</p>
+      <a class="btn btn--primary" href="${esc(r.download)}" download>Download scrubbed CSV</a>
+    </div>`;
+  $("csv-result").hidden = false;
+}
+
 /* ---------- PDF.js ---------- */
 async function openPdf(file) {
   try {
