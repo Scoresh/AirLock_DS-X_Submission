@@ -24,7 +24,7 @@ def test_healthy_jiff_and_hosted_mode_are_reported_without_secrets(monkeypatch):
     token = 'a-test-token-that-must-never-appear-in-status'
     monkeypatch.setenv('JIFF_MANIFEST',str(path))
     monkeypatch.setenv('JIFF_BRIDGE_TOKEN',token)
-    monkeypatch.setenv('STRANGERTHESIS_DEPLOYMENT_MODE','hosted-demo')
+    monkeypatch.setenv('AIRLOCK_DEPLOYMENT_MODE','hosted-demo')
     monkeypatch.setattr(scrub, '_analyzer', lambda: None)
     monkeypatch.setattr(population_check,'call',lambda *args,**kwargs:{'fingerprint':population_check.digest(public)})
     result = TestClient(app).get('/status?source=jiff')

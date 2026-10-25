@@ -1,8 +1,8 @@
-# StrangerThesis
+# AirLock
 
-**Anything you submit can be traced back to the people in it. StrangerThesis scrubs it on your machine first, then lets AI review it.**
+**Anything you submit can be traced back to the people in it. AirLock scrubs it on your machine first, then lets AI review it.**
 
-Researchers and students increasingly paste drafts into AI tools and submit work to public repositories. Removing names is not enough: in the organizers' NSSE data, **14.9% of respondents are unique** on five ordinary details (class year, affiliation, major, second major, transfer history), and **52%** once survey year and program are added. StrangerThesis finds direct identifiers, measures re-identification risk with **k-anonymity** against a reference population, suggests rewrites until nobody is singled out, and only then lets the prepared text reach the review model the user chooses.
+Researchers and students increasingly paste drafts into AI tools and submit work to public repositories. Removing names is not enough: in the organizers' NSSE data, **14.9% of respondents are unique** on five ordinary details (class year, affiliation, major, second major, transfer history), and **52%** once survey year and program are added. AirLock finds direct identifiers, measures re-identification risk with **k-anonymity** against a reference population, suggests rewrites until nobody is singled out, and only then lets the prepared text reach the review model the user chooses.
 
 It answers two DS+X prompts: **Data Scrubbing / Tokenization Tool** and **ETD Formatting Compliance Checker**.
 

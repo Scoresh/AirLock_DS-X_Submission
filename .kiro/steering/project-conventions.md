@@ -2,10 +2,10 @@
 inclusion: always
 ---
 
-# Project Conventions — StrangerThesis
+# Project Conventions — AirLock
 
 ## Project Overview
-- Name: StrangerThesis (DS+X Hackathon 2026)
+- Name: AirLock (DS+X Hackathon 2026)
 - Purpose: A local-first privacy firewall for documents submitted online (theses,
   papers, grant applications, assignments). It scrubs identifying details on the
   user's machine, runs a re-identification (k-value) risk gate, then checks the

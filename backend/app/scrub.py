@@ -18,7 +18,7 @@ from pathlib import Path
 from . import risk
 from .schemas import DirectIdentifier, Evidence, ParseResult, Participant, ScrubbedPage, ScrubResult
 
-KEYS_DIR = Path(os.getenv("STRANGERTHESIS_KEYS_DIR", str(Path(__file__).resolve().parents[2] / "keys")))
+KEYS_DIR = Path(os.getenv("AIRLOCK_KEYS_DIR", str(Path(__file__).resolve().parents[2] / "keys")))
 
 EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b")
 PHONE = re.compile(r"(?<!\d)(?:\(\d{3}\)\s?|\d{3}[-.\s])\d{3}[-.\s]\d{4}(?!\d)")

@@ -71,7 +71,7 @@ def main():
         parser.error('Public binding requires --hosted-demo; this is only a fictional-data demonstration')
     env = os.environ.copy()
     if args.hosted_demo:
-        env['STRANGERTHESIS_DEPLOYMENT_MODE'] = 'hosted-demo'
+        env['AIRLOCK_DEPLOYMENT_MODE'] = 'hosted-demo'
     def stop_on_signal(signum, frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, stop_on_signal)
@@ -90,10 +90,10 @@ def main():
         for key in ('LLM_BASE_URL','LLM_MODEL','LLM_API_KEY'):
             env.pop(key, None)
     processes = []
-    with tempfile.TemporaryDirectory(prefix='strangerthesis-jiff-') as temp:
+    with tempfile.TemporaryDirectory(prefix='airlock-jiff-') as temp:
         # No documents/keys from a self-test are left in the checkout.
         if args.self_test:
-            env['STRANGERTHESIS_KEYS_DIR'] = str(Path(temp)/'keys')
+            env['AIRLOCK_KEYS_DIR'] = str(Path(temp)/'keys')
         with open(Path(temp)/'services.log','w+') as log:
             # Hosted runtime diagnostics must reach Render rather than stay in a
             # temporary file until a child crashes. Self-tests retain their log.
