@@ -144,7 +144,7 @@ function chooseFile(file) {
     state.file = null;
     $("start").disabled = true;
     $("file-name").textContent = "";
-    showIntakeError(`“${file.name}” isn't a PDF. Choose a PDF, or open the sample document.`);
+    showIntakeError(`“${file.name}” isn't a PDF. Choose a PDF or a UTF-8 .txt file.`);
     return;
   }
   state.file = file;
@@ -169,25 +169,6 @@ $("upload-form").addEventListener("submit", (e) => {
   if (state.file) startCheck(state.file);
 });
 
-<<<<<<< Updated upstream
-$("open-sample").addEventListener("click", async () => {
-  $("intake-error").hidden = true;
-  setIntakeBusy(true, "Loading sample document");
-  try {
-    const res = await fetch("/sample");
-    if (!res.ok) throw new Error("The sample document isn't available on the local server.");
-    const blob = await res.blob();
-    const file = new File([blob], "demo-thesis.pdf", { type: "application/pdf" });
-    state.isSample = true;
-    await startCheck(file, true);
-  } catch (err) {
-    setIntakeBusy(false);
-    showIntakeError(err.message);
-  }
-});
-
-=======
->>>>>>> Stashed changes
 function setIntakeBusy(busy, step = "") {
   $("progress").textContent = busy ? step : "";
   $("start").disabled = busy || !state.file;
@@ -225,8 +206,8 @@ async function startCheck(file, isSample = false) {
     setIntakeBusy(false);
     setLocalStatus("Waiting for a document");
     const hint = err.status === 400
-      ? " Choose another PDF, or open the sample document."
-      : err.status === 0 ? "" : " Try again, or open the sample document.";
+      ? " Choose another PDF or a UTF-8 .txt file."
+      : err.status === 0 ? "" : " Try again.";
     showIntakeError(`Couldn't check this document: ${err.message}.${hint}`);
   }
 }
